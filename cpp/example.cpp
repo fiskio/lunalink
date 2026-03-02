@@ -1,22 +1,13 @@
 /**
  * @file example.cpp
- * @brief Example C++ implementation with pybind11 bindings.
+ * @brief pybind11 bindings for the example module.
  */
 
 #include <pybind11/pybind11.h>
 
-namespace py = pybind11;
+#include "include/example.hpp"
 
-/**
- * Add two integers.
- *
- * @param a First integer.
- * @param b Second integer.
- * @return Sum of a and b.
- */
-int add(int a, int b) {
-    return a + b;
-}
+namespace py = pybind11;
 
 PYBIND11_MODULE(_example, m) {
     m.doc() = "Example C++ extension module.";
