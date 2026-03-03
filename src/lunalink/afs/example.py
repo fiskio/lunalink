@@ -2,7 +2,7 @@
 
 import logging
 
-from lsis_afs._example import add as _add
+from lunalink.afs._afs import add as _add
 
 logger = logging.getLogger(__name__)
 

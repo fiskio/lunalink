@@ -2,7 +2,7 @@
 
 import pytest
 
-from lsis_afs.example import add, add_logged
+from lunalink.afs.example import add, add_logged
 
 INT32_MAX = 2**31 - 1
 INT32_MIN = -(2**31)

@@ -14,7 +14,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(_example, m) {
+PYBIND11_MODULE(_afs, m) {
     m.doc() = "Example C++ extension module.";
     m.def(
         "add",
