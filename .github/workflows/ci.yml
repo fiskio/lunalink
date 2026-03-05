@@ -139,7 +139,15 @@ jobs:
                --output-file coverage.info
           lcov --list coverage.info
       - name: Enforce ≥ 90% line coverage
-        run: lcov --fail-under-lines 90 --summary coverage.info
+        run: |
+          summary="$(lcov --summary coverage.info)"
+          echo "$summary"
+          line_pct="$(printf '%s\n' "$summary" | sed -n 's/^[[:space:]]*lines\.*:[[:space:]]*\([0-9.]\+\)%.*/\1/p')"
+          if [ -z "$line_pct" ]; then
+            echo "Failed to parse line coverage from lcov summary."
+            exit 1
+          fi
+          awk -v pct="$line_pct" 'BEGIN { exit (pct >= 90.0) ? 0 : 1 }'
 
   docs:
     name: Docs
