@@ -97,12 +97,11 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Run clang-tidy
-        # example.cpp (pybind11 bindings) is excluded — pybind11 template
-        # instantiations generate unavoidable noise with the strict check set.
+        # cpp/bindings/ is excluded — pybind11 template instantiations
+        # generate unavoidable noise with the strict check set.
         run: >
-          clang-tidy -p build/tidy
-          cpp/example_core.cpp
-          cpp/tests/test_example.cpp
+          find cpp/ -name '*.cpp' ! -path '*/bindings/*'
+          | xargs clang-tidy -p build/tidy
 
   coverage-cpp:
     name: C++ Coverage
