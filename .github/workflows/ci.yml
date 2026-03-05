@@ -128,15 +128,14 @@ jobs:
       - name: Collect coverage
         run: |
           lcov --capture \
-               --directory build/coverage/CMakeFiles/lunalink_core.dir \
-               --directory build/coverage/CMakeFiles/test_lunalink.dir \
+               --directory build/coverage \
+               --base-directory "$GITHUB_WORKSPACE" \
                --output-file coverage.info \
                --gcov-tool gcov \
-               --no-external \
                --ignore-errors source,gcov \
                --rc geninfo_unexecuted_blocks=1
           lcov --remove coverage.info \
-               '/usr/*' '*/catch2*' '*/FetchContent*' '*/_deps/*' \
+               '/usr/*' '*/catch2*' '*/FetchContent*' '*/_deps/*' '*/cpp/tests/*' \
                --output-file coverage.info
           lcov --list coverage.info
       - name: Enforce ≥ 90% line coverage
