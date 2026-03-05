@@ -67,7 +67,7 @@ shaping: true
 | R7.3 | Cross-decode: full RX pipeline decodes own test vectors | Must-have | ✅ via C5/C7/C8 RX path |
 | R7.4 | SISICD for TBW message types | Must-have | ✅ docs deliverable |
 | R7.5 | Spec Findings Report | Must-have | ✅ docs deliverable |
-| R7.6 | Parameter sensitivity testing | Must-have | ✅ via C6/C7/C10 + sweep scripts |
+| R7.6 | Parameter sensitivity testing | Must-have | ✅ via C6/C7 + sweep scripts |
 | R7.7 | Link budget analysis (spec power levels → Eb/N₀ → BER → decode rate) | Must-have | ✅ docs deliverable + BER data |
 | R8 | PNT pipeline: correlator → pseudoranges → position fix | Should-have | ✅ via C10/C11/C13 |
 

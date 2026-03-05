@@ -317,7 +317,7 @@ add_library(lunalink_core STATIC
 )
 target_include_directories(lunalink_core PUBLIC cpp/include)
 set_target_properties(lunalink_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_options(lunalink_core PRIVATE ${LSIS_WARNING_FLAGS})
+target_compile_options(lunalink_core PRIVATE ${LUNALINK_WARNING_FLAGS})
 target_compile_options(lunalink_core PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-exceptions -fno-rtti -fno-fast-math>
 )
@@ -337,7 +337,7 @@ add_executable(test_lunalink
     cpp/tests/test_modulator.cpp
 )
 target_link_libraries(test_lunalink PRIVATE lunalink_core Catch2::Catch2WithMain)
-target_compile_options(test_lunalink PRIVATE ${LSIS_WARNING_FLAGS})
+target_compile_options(test_lunalink PRIVATE ${LUNALINK_WARNING_FLAGS})
 catch_discover_tests(test_lunalink)
 ```
 
