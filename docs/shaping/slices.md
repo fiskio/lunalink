@@ -26,7 +26,7 @@ expected 1.023 MHz null-to-null bandwidth. Tests pass at ≥90% coverage.
 **Parts:**
 | Part | Mechanism |
 |------|-----------|
-| C1 | Code loader: parse `references/006_GoldCode2046hex210prns.txt` into `static constexpr uint8_t[2046]` chip arrays for all 210 PRNs |
+| C1 | Code loader: parse `docs/references/006_GoldCode2046hex210prns.txt` into `static constexpr uint8_t[2046]` chip arrays for all 210 PRNs |
 | C2 (partial) | BPSK modulator: AFS-I only — chip × `int8_t` data symbol → `{−1, +1}` sample sequence at 1.023 Mcps |
 | C14 (partial) | pybind11 binding for C1 + C2: `lunalink.afs.prn_code(prn_id)` → `np.ndarray`, `lunalink.afs.modulate_i(prn, data)` → `np.ndarray` |
 | — | **Architecture:** replace `cpp/example*` with proper module layout: `cpp/include/lunalink/`, `cpp/signal/`, `cpp/codec/`, `cpp/rx/`; update CMakeLists.txt |

@@ -33,7 +33,7 @@ The spectrum null-to-null bandwidth is 1.023 MHz. Tests pass at ≥90% coverage.
 
 ## PRN Table Format
 
-`references/006_GoldCode2046hex210prns.txt` is a Python-style list:
+`docs/references/006_GoldCode2046hex210prns.txt` is a Python-style list:
 
 ```
 GoldCode2046 = [ \
@@ -55,7 +55,7 @@ chips; the last 2 bits are zero-padding. Chips are {0, 1}; the modulator convert
 
 | Path | Purpose |
 |------|---------|
-| `scripts/gen_prn_table.py` | Reads `references/006_GoldCode2046hex210prns.txt`, unpacks bits, emits `prn_table.hpp` + `prn_table.cpp` |
+| `scripts/gen_prn_table.py` | Reads `docs/references/006_GoldCode2046hex210prns.txt`, unpacks bits, emits `prn_table.hpp` + `prn_table.cpp` |
 | `cpp/include/lunalink/signal/prn_table.hpp` | `extern const uint8_t kGoldPrns[210][2046];` — generated, committed |
 | `cpp/signal/prn_table.cpp` | Defines `kGoldPrns` — generated, committed |
 | `cpp/include/lunalink/signal/prn.hpp` | `gold_prn()` declaration |
@@ -102,7 +102,7 @@ chips; the last 2 bits are zero-padding. Chips are {0, 1}; the modulator convert
 
 `scripts/gen_prn_table.py`:
 
-1. Read `references/006_GoldCode2046hex210prns.txt`
+1. Read `docs/references/006_GoldCode2046hex210prns.txt`
 2. Extract the 210 quoted hex strings (strip `GoldCode2046 = [`, quotes, commas, `\`)
 3. For each hex string: `bytes.fromhex(hex_str)` → 256 bytes; unpack MSB-first into
    `uint8_t[2046]` (drop the last 2 padding bits of byte 255)
