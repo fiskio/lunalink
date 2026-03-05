@@ -137,10 +137,10 @@ jobs:
           lcov --remove coverage.info \
                '/usr/*' '*/catch2*' '*/FetchContent*' '*/_deps/*' '*/cpp/tests/*' \
                --output-file coverage.info
-          lcov --list coverage.info
+          lcov --summary coverage.info || true
       - name: Enforce ≥ 90% line coverage
         run: |
-          summary="$(lcov --summary coverage.info)"
+          summary="$(lcov --summary coverage.info || true)"
           echo "$summary"
           line_pct="$(printf '%s\n' "$summary" | sed -n 's/^[[:space:]]*lines\.*:[[:space:]]*\([0-9.]\+\)%.*/\1/p')"
           if [ -z "$line_pct" ]; then
