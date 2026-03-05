@@ -22,7 +22,7 @@ jobs:
       - run: uv sync --group dev
       - run: uv run ruff format --check .
       - run: uv run ruff check .
-      - run: uv run ty check src/
+      - run: uv run pyright src/
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -99,8 +99,10 @@ jobs:
       - name: Run clang-tidy
         # cpp/bindings/ is excluded — pybind11 template instantiations
         # generate unavoidable noise with the strict check set.
+        # cpp/tests/ is excluded — third-party frameworks like Catch2
+        # trigger flight-safety violations.
         run: >
-          find cpp/ -name '*.cpp' ! -path '*/bindings/*'
+          find cpp/ -name '*.cpp' ! -path '*/bindings/*' ! -path 'cpp/tests/*'
           | xargs clang-tidy -p build/tidy
 
   coverage-cpp:
