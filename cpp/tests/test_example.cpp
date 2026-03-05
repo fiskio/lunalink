@@ -14,49 +14,49 @@
 #include "example.hpp"
 
 TEST_CASE("add positive numbers", "[add]") {
-    int32_t result{};
-    REQUIRE(add(2, 3, result));
-    REQUIRE(result == 5);
+  std::int32_t result{};
+  REQUIRE(add(2, 3, result));
+  REQUIRE(result == 5);
 }
 
 TEST_CASE("add negative numbers", "[add]") {
-    int32_t result{};
-    REQUIRE(add(-1, -2, result));
-    REQUIRE(result == -3);
+  std::int32_t result{};
+  REQUIRE(add(-1, -2, result));
+  REQUIRE(result == -3);
 }
 
 TEST_CASE("add zeros", "[add]") {
-    int32_t result{};
-    REQUIRE(add(0, 0, result));
-    REQUIRE(result == 0);
+  std::int32_t result{};
+  REQUIRE(add(0, 0, result));
+  REQUIRE(result == 0);
 }
 
 TEST_CASE("add mixed sign numbers", "[add]") {
-    int32_t result{};
-    REQUIRE(add(5, -3, result));
-    REQUIRE(result == 2);
+  std::int32_t result{};
+  REQUIRE(add(5, -3, result));
+  REQUIRE(result == 2);
 }
 
 TEST_CASE("add detects positive overflow", "[add][overflow]") {
-    int32_t result{};
-    REQUIRE_FALSE(add(INT32_MAX, 1, result));
-    REQUIRE_FALSE(add(INT32_MAX, INT32_MAX, result));
+  std::int32_t result{};
+  REQUIRE_FALSE(add(INT32_MAX, 1, result));
+  REQUIRE_FALSE(add(INT32_MAX, INT32_MAX, result));
 }
 
 TEST_CASE("add detects negative overflow", "[add][overflow]") {
-    int32_t result{};
-    REQUIRE_FALSE(add(INT32_MIN, -1, result));
-    REQUIRE_FALSE(add(INT32_MIN, INT32_MIN, result));
+  std::int32_t result{};
+  REQUIRE_FALSE(add(INT32_MIN, -1, result));
+  REQUIRE_FALSE(add(INT32_MIN, INT32_MIN, result));
 }
 
 TEST_CASE("add at exact boundaries does not overflow", "[add][overflow]") {
-    int32_t result{};
-    REQUIRE(add(INT32_MAX, 0, result));
-    REQUIRE(result == INT32_MAX);
-    REQUIRE(add(INT32_MIN, 0, result));
-    REQUIRE(result == INT32_MIN);
-    REQUIRE(add(INT32_MAX, -1, result));
-    REQUIRE(result == INT32_MAX - 1);
-    REQUIRE(add(INT32_MIN, 1, result));
-    REQUIRE(result == INT32_MIN + 1);
+  std::int32_t result{};
+  REQUIRE(add(INT32_MAX, 0, result));
+  REQUIRE(result == INT32_MAX);
+  REQUIRE(add(INT32_MIN, 0, result));
+  REQUIRE(result == INT32_MIN);
+  REQUIRE(add(INT32_MAX, -1, result));
+  REQUIRE(result == INT32_MAX - 1);
+  REQUIRE(add(INT32_MIN, 1, result));
+  REQUIRE(result == INT32_MIN + 1);
 }

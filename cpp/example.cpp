@@ -15,18 +15,16 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(_afs, m) {
-    m.doc() = "Example C++ extension module.";
-    m.def(
-        "add",
-        [](int32_t a, int32_t b) -> int32_t {
-            int32_t result{};
-            if (!add(a, b, result)) {
-                throw std::overflow_error("integer overflow in add");
-            }
-            return result;
-        },
-        "Add two 32-bit integers. Raises OverflowError on overflow.",
-        py::arg("a"),
-        py::arg("b")
-    );
+  m.doc() = "Example C++ extension module.";
+  m.def(
+      "add",
+      [](std::int32_t a, std::int32_t b) -> std::int32_t {
+        std::int32_t result{};
+        if (!add(a, b, result)) {
+          throw std::overflow_error("integer overflow in add");
+        }
+        return result;
+      },
+      "Add two 32-bit integers. Raises OverflowError on overflow.",
+      py::arg("a"), py::arg("b"));
 }

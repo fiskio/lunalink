@@ -12,7 +12,7 @@
 #include <cstdint>
 
 static_assert(CHAR_BIT == 8, "char must be 8 bits");
-static_assert(sizeof(int32_t) == 4, "int32_t must be exactly 32 bits");
+static_assert(sizeof(std::int32_t) == 4, "std::int32_t must be exactly 32 bits");
 
 /**
  * Add two 32-bit integers with overflow detection.
@@ -29,4 +29,4 @@ static_assert(sizeof(int32_t) == 4, "int32_t must be exactly 32 bits");
  * @return true  if the addition succeeded without overflow.
  *         false if signed 32-bit overflow was detected.
  */
-[[nodiscard]] bool add(int32_t a, int32_t b, int32_t& result) noexcept;
+[[nodiscard]] bool add(std::int32_t a, std::int32_t b, std::int32_t& result) noexcept;

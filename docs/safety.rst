@@ -33,7 +33,7 @@ C++ Code Hardening
 Fixed-Width Integer Types
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All C++ functions use ``int32_t``, ``uint32_t``, etc. from ``<cstdint>``
+All C++ functions use ``std::int32_t``, ``std::uint32_t``, etc. from ``<cstdint>``
 rather than ``int``, ``unsigned``, or ``long``. The C++ standard only
 guarantees minimum widths for these types; on some space-qualified processors
 (e.g. radiation-hardened RISC-V or SPARC derivatives) ``int`` can differ from
@@ -63,7 +63,7 @@ The function signature encodes the overflow contract explicitly:
 
 .. code-block:: cpp
 
-    [[nodiscard]] bool add(int32_t a, int32_t b, int32_t& result) noexcept;
+    [[nodiscard]] bool add(std::int32_t a, std::int32_t b, std::int32_t& result) noexcept;
     //            ^^^^                                              ^^^^^^^
     //  caller MUST check the return value               no exception possible
 
@@ -88,7 +88,12 @@ target fails loudly at the build stage rather than silently at runtime:
 .. code-block:: cpp
 
     static_assert(CHAR_BIT == 8,        "char must be 8 bits");
-    static_assert(sizeof(int32_t) == 4, "int32_t must be exactly 32 bits");
+    static_assert(sizeof(std::int32_t) == 4, "std::int32_t must be exactly 32 bits");
+
+Determinism and MSVC
+~~~~~~~~~~~~~~~~~~~~
+
+The core library is compiled with ``-fno-fast-math`` to guarantee strict IEEE 754 floating-point determinism across all targets and simulations. Floating point optimization shortcuts that sacrifice precision or reproducibility are explicitly blocked. Moreover, MSVC builds on Windows are blocked at the CMake level (``FATAL_ERROR``) because MSVC lacks the strict hardware-oriented zero-cost intrinsics (e.g. ``__builtin_add_overflow``) required for space-flight safety, ensuring developers cannot accidentally compile non-deterministic payloads.
 
 ``CMAKE_CXX_EXTENSIONS OFF``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -112,7 +117,7 @@ and all warnings are treated as errors (``-Werror``):
    * - Flag
      - What it catches
    * - ``-Wconversion``
-     - Implicit narrowing (e.g. ``int32_t`` ← ``int64_t``, ``int`` ← ``double``)
+     - Implicit narrowing (e.g. ``std::int32_t`` ← ``int64_t``, ``int`` ← ``double``)
    * - ``-Wsign-conversion``
      - Signed/unsigned mismatch, a common source of range errors
    * - ``-Wshadow``
@@ -127,6 +132,12 @@ and all warnings are treated as errors (``-Werror``):
      - Cast increases required alignment — crashes on strict-alignment targets
    * - ``-Wformat=2``
      - Format string vulnerabilities and type mismatches
+   * - ``-Wold-style-cast``
+     - C-style casting bypassing your type system (forces explicit casts)
+   * - ``-Wimplicit-fallthrough``
+     - Missing ``[[fallthrough]];`` in switch cases
+   * - ``-Wlogical-op``, ``-Wduplicated-*``
+     - Copy-paste logic errors in nested conditionals (GCC only)
 
 Runtime Verification
 --------------------
@@ -186,6 +197,14 @@ configuration in ``.clang-tidy`` enables three check families:
   type safety (no C-style casts, no reinterpret_cast in flight code,
   no varargs).
 
+**hicpp-\***
+  Checks that enforce High-Integrity C++ rules, which closely mirror the
+  MISRA C++ standard, ensuring a safe subset of the language.
+
+**fuchsia-\***
+  Strict C++ subset constraints (no default arguments, no static constructors)
+  that align very well with aerospace guidelines.
+
 All triggered checks are treated as errors (``WarningsAsErrors: "*"``).
 
 The pybind11 binding file (``cpp/example.cpp``) is excluded because pybind11
@@ -215,13 +234,12 @@ Both Python and C++ code have coverage gates that block CI if not met.
      - pytest-cov
      - ≥ 90% statement **and** branch coverage
    * - C++ (``cpp/``)
-     - gcov / lcov
+     - gcov / gcovr
      - ≥ 90% line coverage
 
 C++ coverage is collected by a separate ``coverage-cpp`` CI job that compiles
 with ``--coverage`` (gcov instrumentation), runs the Catch2 tests, and uses
-``lcov`` to filter out third-party code (Catch2, system headers) before
-computing the threshold.
+``gcovr`` to output HTML summaries and compute thresholds.
 
 Boundary Value Testing
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -258,7 +276,9 @@ standards:
      - Assertions (``static_assert``) used to verify all non-trivial
        preconditions at compile time
    * - **MISRA C++:2023** (Rule 21.6.1)
-     - Dynamic memory (``new``, ``delete``, ``malloc``) not used
+     - Dynamic memory (``new``, ``delete``, ``malloc``) not used. Enforced via ``cppcoreguidelines-no-malloc``.
+   * - **MISRA C++:2023** (Exceptions and RTTI)
+     - Core library (``lsis_afs_core``) compiled with ``-fno-exceptions`` and ``-fno-rtti``, ensuring deterministic control flow.
    * - **MISRA C++:2023** (integer safety)
      - Fixed-width types used throughout; checked arithmetic eliminates
        signed overflow UB; implicit conversions flagged by ``-Wconversion``
@@ -281,12 +301,6 @@ but are not applied here:
   Full MISRA compliance requires a commercial certified checker (e.g.
   Parasoft, LDRA, Polyspace) and a deviation management process. The measures
   above implement the most safety-relevant MISRA rules using free tooling.
-
-**``-fno-exceptions`` / ``-fno-rtti`` on the core library**
-  Both are disabled in MISRA and JPL guidelines for flight code. In this
-  project, pybind11 requires both for the binding layer. The C++ core
-  (``lsis_afs_core``) does not use exceptions or RTTI; applying these flags
-  per-target to the core is a planned future hardening step.
 
 **Worst-case execution time (WCET) analysis**
   Required for hard real-time systems. Tools such as AbsInt aiT or Rapita
