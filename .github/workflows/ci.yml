@@ -132,14 +132,19 @@ jobs:
                --base-directory "$GITHUB_WORKSPACE" \
                --output-file coverage.info \
                --gcov-tool gcov \
-               --ignore-errors source,gcov \
-               --rc geninfo_unexecuted_blocks=1
+               --ignore-errors source,gcov,empty,unused \
+               --rc geninfo_unexecuted_blocks=1 || true
           lcov --remove coverage.info \
                '/usr/*' '*/catch2*' '*/FetchContent*' '*/_deps/*' '*/cpp/tests/*' \
-               --output-file coverage.info
+               --ignore-errors source,gcov,empty,unused \
+               --output-file coverage.info || true
           lcov --summary coverage.info || true
       - name: Enforce ≥ 90% line coverage
         run: |
+          if [ ! -s coverage.info ]; then
+            echo "coverage.info is missing or empty."
+            exit 1
+          fi
           summary="$(lcov --summary coverage.info || true)"
           echo "$summary"
           line_pct="$(printf '%s\n' "$summary" | sed -n 's/^[[:space:]]*lines\.*:[[:space:]]*\([0-9.]\+\)%.*/\1/p')"
