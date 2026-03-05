@@ -30,7 +30,10 @@ expected 1.023 MHz null-to-null bandwidth. Tests pass at ≥90% coverage.
 | C2 (partial) | BPSK modulator: AFS-I only — chip × `int8_t` data symbol → `{−1, +1}` sample sequence at 1.023 Mcps |
 | C14 (partial) | pybind11 binding for C1 + C2: `lunalink.afs.prn_code(prn_id)` → `np.ndarray`, `lunalink.afs.modulate_i(prn, data)` → `np.ndarray` |
 | — | **Architecture:** replace `cpp/example*` with proper module layout: `cpp/include/lunalink/`, `cpp/signal/`, `cpp/codec/`, `cpp/rx/`; update CMakeLists.txt |
-| — | **Docs scaffold:** compliance matrix skeleton (all LSIS-00x IDs, status TBD), signal chain block diagram (transmitter side) |
+| — | **Compliance matrix skeleton:** enumerate every LSIS-nnn, LSIS-FID0-nnn, LSIS-TBC-nnnn, and LSIS-TBD-nnnn identifier from the spec (~50+ IDs); all statuses TBD initially; columns: ID / Requirement / Mandatory-Optional / Status / Notes |
+| — | **Signal chain block diagram** (transmitter side) |
+| — | **Spec Findings log:** start structured findings from V1 — each entry: spec section, exact quote, ambiguity, our interpretation, alternatives, recommendation |
+| — | **V1 visual:** embed `demo/v1_plot.py` output (chip sequence + power spectrum) as PNG in Sphinx docs |
 
 ---
 
@@ -42,10 +45,12 @@ zero-padded). Output is a `complex64` numpy array. Plotting shows: IQ constellat
 power spectrum (dual-channel, I at 1.023 MHz bandwidth, Q at 5.115 MHz), and chip sequence
 alignment between I and Q channels.
 
-**Docs deliverable:** compliance matrix (mandatory/optional for all LSIS spec items),
-signal chain block diagram (transmit path end-to-end), implementation architecture RST page
-in Sphinx, interface definitions for all public C++ APIs, SISICD draft (field layouts for
-14 TBW message types), Spec Findings Report draft (ambiguities and choices found so far).
+**Docs deliverable:** exhaustive compliance matrix (every LSIS-nnn/TBC/TBD identifier,
+mandatory/optional/implemented), signal chain block diagram (transmit path end-to-end),
+implementation architecture RST page in Sphinx, interface definitions for all public C++
+APIs, SISICD draft (field layouts for 14 TBW message types), Spec Findings Report draft
+(structured findings accumulated since V1), test vector format specification (published
+early for cross-team adoption).
 
 **Parts:**
 | Part | Mechanism |
@@ -61,18 +66,25 @@ in Sphinx, interface definitions for all public C++ APIs, SISICD draft (field la
 | — | Signal chain block diagram (Sphinx `.. graphviz::` or PNG) |
 | — | Architecture RST page: module layout, C++ API surface, design decisions |
 | — | SISICD draft: field layouts for 14 TBW message types (R7.4) |
-| — | Spec Findings Report draft: ambiguities, errors, implementation choices (R7.5) |
+| — | Spec Findings Report draft: structured findings accumulated since V1 (R7.5) |
+| — | Test vector format spec: document binary layout, metadata fields, checksums — publish early for cross-team adoption (R7.1) |
+| — | Interop outreach: contact other competing teams, propose shared test vector format and cross-decode schedule |
+| — | V2 visual: embed IQ constellation + dual-channel power spectrum in Sphinx docs |
 
 ---
 
 ## V3 — Full Navigation Message Codec
 
-**Demo:** End-to-end encode → decode round-trip for all 22 message types. A Catch2 test
-encodes each MSG type with representative field values, packs into SB2–SB4, applies full
-BCH + LDPC encoding + 60×98 block interleaving, then runs the full RX path: block
-deinterleaver → LDPC decode → CRC-24 check → BCH decode → message deserialise, and
-verifies bit-perfect recovery. The LDPC table pipeline (`scripts/gen_ldpc_tables.py`)
-reads spec CSVs 003a–003j and generates C++ static sparse arrays.
+**Demo:** End-to-end encode → decode round-trip for all 22 message types. The 8 spec-defined
+types (G1, G2, G4, G5, G8, G22, G24, G30) are tested with full bit-level fidelity: every
+field populated with representative values from the spec, round-tripped through the complete
+TX→RX pipeline, and verified bit-perfect against known-answer vectors. The 14 SISICD-defined
+(TBW) types are smoke-tested: encode → decode round-trip with zero-filled and boundary-value
+payloads, verifying frame integrity (CRC-24 pass) and correct message type identification.
+All tests apply full BCH + LDPC encoding + 60×98 block interleaving, then run the full RX
+path: block deinterleaver → LDPC decode → CRC-24 check → BCH decode → message deserialise.
+The LDPC table pipeline (`scripts/gen_ldpc_tables.py`) reads spec CSVs 003a–003j and
+generates C++ static sparse arrays.
 
 **Parts:**
 | Part | Mechanism |
@@ -83,6 +95,7 @@ reads spec CSVs 003a–003j and generates C++ static sparse arrays.
 | C8 | Frame builder/parser complete: **TX** — full SB2/SB3/SB4 LDPC encoding + 60×98 block interleaver + CRC-24 append + frame assembly. **RX** — sync detection, block deinterleaver (inverse 60×98), LDPC decode, CRC-24 check (G(X)=(1+X)·P(X), spec LSIS-FID0-467), BCH decode, message deserialise |
 | C9 | Message serialiser: 8 fully defined per spec (G1, G2, G4, G5, G8, G22, G24, G30); remaining 14 TBW in V1.0 per SISICD-defined layouts; `[[nodiscard]]` encode/decode pairs |
 | C14 | pybind11 bindings for C5–C9: `encode_frame(node_config, messages)`, `decode_frame(symbols)` → `DecodedFrame` |
+| — | **V3 visual:** embed BER-vs-Eb/N₀ plot (SF2 + SF3 vs uncoded BPSK + Shannon limit) as PNG in Sphinx docs |
 
 ---
 
@@ -103,6 +116,8 @@ successfully cross-decodes our own test vectors. SISICD and Spec Findings Report
 | — | SISICD final: complete field layouts for all 14 TBW message types (R7.4) |
 | — | Spec Findings Report final: all ambiguities, errors, implementation choices documented (R7.5) |
 | — | Parameter sensitivity sweeps: Eb/N₀, Doppler, code phase offset vs decode success rate (R7.6) |
+| — | Link budget analysis: connect spec receiver sensitivity (−160 dBW min, −147 dBW max per LSIS-110) to operational Eb/N₀, predicted BER, and frame decode success rate; tabulated in Sphinx docs (R7.7) |
+| — | Quality report: `task report` generates coverage summary (C++ gcovr + Python pytest-cov), clang-tidy clean confirmation, sanitizer pass log, and compliance matrix status — single-page evidence for reviewers |
 
 ---
 
@@ -123,6 +138,7 @@ Typical error: <1 m (no atmospheric corrections needed for Moon).
 | C13 | Keplerian propagator: closed-form lunar orbit position at epoch; `noexcept`, fixed-width; used by both transmitter (satellite positions for IQ generation) and receiver (navigation message parsing) |
 | C14 | pybind11 bindings for C10–C13: `correlate(composite_iq, prn_list)` → `Pseudoranges`, `solve_pnt(pseudoranges, ephemerides)` → `PntFix` |
 | — | Simulation script: 6-satellite scenario, composite IQ generation, full pipeline, position error plot |
+| — | **V5 visual:** embed 3D position error plot (computed vs ground truth) as PNG in Sphinx docs |
 
 ---
 

@@ -1,10 +1,12 @@
-Software Quality for Space
-==========================
+Flight-Heritage Coding Practices
+=================================
 
-This document explains the additional hardening applied to this codebase
-beyond standard software engineering practice. The goal is to eliminate
-entire classes of defects that are acceptable risks in ground software but
-are unacceptable when the code executes on a satellite.
+This document explains the flight-heritage coding practices applied to this
+codebase beyond standard software engineering practice. The goal is to
+eliminate entire classes of defects using the same techniques employed in
+flight software — fixed-width types, checked arithmetic, no heap allocation,
+no exceptions — without claiming flight certification (which requires formal
+verification, independent V&V, and ECSS-Q-ST-80C qualification).
 
 Threat Model
 ------------

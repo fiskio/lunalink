@@ -12,16 +12,17 @@ shaping: true
 | R1 | Generate spreading codes by loading from the provided PRN hex tables (Gold-2046, Weil-10230, Weil-1500); no algorithmic construction required | Must-have |
 | R2 | Implement navigation message encoding AND decoding: BCH(51,8) on Subframe 1, CRC-24 integrity check, 5G NR LDPC on Subframes 2–4, block interleaver/deinterleaver, 12-second frame structure | Must-have |
 | R3 | Implement all 22 navigation message types defined in LSIS V1.0 Section 2.5; 8 are fully defined at bit level (G1, G2, G4, G5, G8, G22, G24, G30) — the remaining 14 are TBW in V1.0 and implemented with SISICD-defined field layouts | Must-have |
-| R4 | C++ is the primary, self-standing implementation — all signal chain logic lives in C++; Python exposes it via pybind11 bindings; C++ code meets "ready to fly" quality: fixed-width types, no heap allocation in critical paths, no exceptions in core, deterministic behaviour, existing hardening standards (sanitizers, clang-tidy, ≥90% coverage) applied throughout | Must-have |
+| R4 | C++ is the primary, self-standing implementation — all signal chain logic lives in C++; Python exposes it via pybind11 bindings; C++ code applies flight-heritage coding practices: fixed-width types, no heap allocation in critical paths, no exceptions in core, deterministic behaviour, hardening via sanitizers, clang-tidy (CERT + HICPP + CppCoreGuidelines + Fuchsia), ≥90% coverage | Must-have |
 | R5 | Documentation explains the project, AFS signal theory, and design choices — accessible to someone who doesn't know GNSS; includes compliance matrix, signal chain block diagrams, narrative Sphinx pages; code itself is lean and production-quality, not pedagogical | Must-have |
 | R6 | Deliver a web-app demo with 3D Moon globe, satellite orbits, correlator, PNT solver, and optionally Pluto+ SDR RF | Nice-to-have |
 | R7 | Validate against the spec and demonstrate interoperability | Must-have |
-| R7.1 | Publish test vectors: one complete encoded frame per MSG type, in a documented binary format suitable for cross-team exchange | Must-have |
+| R7.1 | Publish test vectors: one complete encoded frame per MSG type, in a documented binary format designed for cross-team interoperability; format spec published early (V2) to enable other teams to adopt it; checksums included | Must-have |
 | R7.2 | BER-vs-Eb/N₀ curves for SF2 and SF3, plotted against uncoded BPSK and Shannon limit | Must-have |
 | R7.3 | Cross-decode: full RX pipeline (deinterleaver → LDPC decode → CRC-24 → message deserialise) successfully decodes own test vectors | Must-have |
 | R7.4 | SISICD: Signal-In-Space Interface Control Document for our implementation, covering all field layouts for the 14 TBW message types | Must-have |
 | R7.5 | Spec Findings Report: document any ambiguities, errors, or implementation choices found in LSIS V1.0 during development | Must-have |
 | R7.6 | Parameter sensitivity testing: sweep key signal parameters (Eb/N₀, Doppler, code phase offset) and document impact on decode success rate | Must-have |
+| R7.7 | Link budget analysis: connect spec receiver sensitivity (−160 dBW min, −147 dBW max per LSIS-110) to operational Eb/N₀, predicted BER, and frame decode success rate | Must-have |
 | R8 | PNT pipeline: N satellites → composite IQ → software correlator → pseudoranges → position fix | Should-have |
 
 ---
@@ -57,7 +58,7 @@ shaping: true
 | R1 | Spreading codes from provided PRN hex tables | Must-have | ✅ via C1 |
 | R2 | Encode + decode: BCH, CRC-24, LDPC, interleaver/deinterleaver, 12 s frame | Must-have | ✅ via C5–C8 |
 | R3 | All 22 MSG types; 8 per spec (G1/G2/G4/G5/G8/G22/G24/G30), 14 per SISICD | Must-have | ✅ via C9 |
-| R4 | C++ self-standing, ready-to-fly quality standards throughout | Must-have | ✅ |
+| R4 | C++ self-standing, flight-heritage coding practices throughout | Must-have | ✅ |
 | R5 | Documentation: compliance matrix, block diagrams, narrative Sphinx pages | Must-have | ✅ |
 | R6 | Web-app demo (Moon globe, correlator, PNT, optionally SDR) | Nice-to-have | ⏸️ deferred (C12/C15/C16) |
 | R7 | Validate against spec and demonstrate interoperability | Must-have | ✅ |
@@ -67,6 +68,7 @@ shaping: true
 | R7.4 | SISICD for TBW message types | Must-have | ✅ docs deliverable |
 | R7.5 | Spec Findings Report | Must-have | ✅ docs deliverable |
 | R7.6 | Parameter sensitivity testing | Must-have | ✅ via C6/C7/C10 + sweep scripts |
+| R7.7 | Link budget analysis (spec power levels → Eb/N₀ → BER → decode rate) | Must-have | ✅ docs deliverable + BER data |
 | R8 | PNT pipeline: correlator → pseudoranges → position fix | Should-have | ✅ via C10/C11/C13 |
 
 **Notes:**
