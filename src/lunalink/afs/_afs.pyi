@@ -20,7 +20,10 @@ def modulate_i(prn: NDArray[np.uint8], data_symbol: int) -> NDArray[np.int8]:
     ...
 
 def tiered_code_epoch(prn_id: int, epoch_idx: int) -> NDArray[np.uint8]:
-    """Return one primary epoch (10230 chips) of the tiered AFS-Q code."""
+    """Return one epoch of tiered AFS-Q code using interim default mapping.
+
+    Interim default mapping is defined only for PRN 1-12.
+    """
     ...
 
 def tiered_code_epoch_assigned(
@@ -47,6 +50,7 @@ def multiplex_iq(
 EPOCHS_PER_FRAME: int
 SECONDARY_CODE_LENGTH: int
 SECONDARY_CODE_COUNT: int
+INTERIM_ASSIGNMENT_MAX_PRN: int
 TERTIARY_CODE_LENGTH: int
 IQ_UPSAMPLE_FACTOR: int
 IQ_SAMPLES_PER_EPOCH: int

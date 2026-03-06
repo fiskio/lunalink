@@ -12,7 +12,8 @@ using namespace lunalink::signal;
 TEST_CASE("modulate_bpsk_q chip mapping matches Table 8") {
   const std::array<uint8_t, 4> chips = {{0, 1, 0, 1}};
   std::array<int8_t, 4> out{};
-  modulate_bpsk_q(chips.data(), 4, out.data());
+  REQUIRE(modulate_bpsk_q(chips.data(), 4, out.data()) ==
+          ModulationStatus::kOk);
   REQUIRE(out[0] == 1);
   REQUIRE(out[1] == -1);
   REQUIRE(out[2] == 1);
@@ -29,8 +30,10 @@ TEST_CASE("modulate_bpsk_q equals modulate_bpsk_i with data_symbol +1") {
 
   std::array<int8_t, kWeil10230ChipLength> out_q{};
   std::array<int8_t, kWeil10230ChipLength> out_i{};
-  modulate_bpsk_q(chips.data(), kWeil10230ChipLength, out_q.data());
-  modulate_bpsk_i(chips.data(), kWeil10230ChipLength, 1, out_i.data());
+  REQUIRE(modulate_bpsk_q(chips.data(), kWeil10230ChipLength, out_q.data()) ==
+          ModulationStatus::kOk);
+  REQUIRE(modulate_bpsk_i(chips.data(), kWeil10230ChipLength, 1, out_i.data()) ==
+          ModulationStatus::kOk);
   REQUIRE(out_q == out_i);
 }
 
@@ -42,7 +45,8 @@ TEST_CASE("modulate_bpsk_q output values are {-1, +1}") {
   }
 
   std::array<int8_t, kWeil10230ChipLength> out{};
-  modulate_bpsk_q(chips.data(), kWeil10230ChipLength, out.data());
+  REQUIRE(modulate_bpsk_q(chips.data(), kWeil10230ChipLength, out.data()) ==
+          ModulationStatus::kOk);
   for (auto v : out) {
     REQUIRE((v == -1 || v == 1));
   }
@@ -131,12 +135,14 @@ TEST_CASE("multiplex_iq 50/50 power: I and Q have equal amplitude") {
     i_chips[i] = unpack_chip(i_packed, i);
   }
   std::array<int8_t, kGoldChipLength> i_samples{};
-  modulate_bpsk_i(i_chips.data(), kGoldChipLength, 1, i_samples.data());
+  REQUIRE(modulate_bpsk_i(i_chips.data(), kGoldChipLength, 1, i_samples.data()) ==
+          ModulationStatus::kOk);
 
   std::array<uint8_t, kWeil10230ChipLength> q_chips{};
   tiered_code_epoch(1, 0, q_chips.data());
   std::array<int8_t, kWeil10230ChipLength> q_samples{};
-  modulate_bpsk_q(q_chips.data(), kWeil10230ChipLength, q_samples.data());
+  REQUIRE(modulate_bpsk_q(q_chips.data(), kWeil10230ChipLength, q_samples.data()) ==
+          ModulationStatus::kOk);
 
   std::array<int16_t, 2 * kIqSamplesPerEpoch> out{};
   REQUIRE(multiplex_iq(i_samples.data(), q_samples.data(), out.data()));
@@ -161,4 +167,11 @@ TEST_CASE("kIqSamplesPerEpoch is 10230") {
 
 TEST_CASE("kIqUpsampleFactor is 5") {
   REQUIRE(kIqUpsampleFactor == 5);
+}
+
+TEST_CASE("modulate_bpsk_q returns explicit error status") {
+  std::array<uint8_t, 4> chips = {{0, 1, 0, 1}};
+  std::array<int8_t, 4> out = {{9, 9, 9, 9}};
+  REQUIRE(modulate_bpsk_q(nullptr, 4, out.data()) == ModulationStatus::kNullInput);
+  REQUIRE(modulate_bpsk_q(chips.data(), 4, nullptr) == ModulationStatus::kNullInput);
 }

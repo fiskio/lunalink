@@ -162,5 +162,5 @@ Implementation Status
      - Tiered code combiner (interim mapping + explicit assignment API)
      - Complete
    * - C4
-     - IQ multiplexer (5.115 MSPS, 50/50 power)
+     - IQ multiplexer (5.115 MSPS, normalized-amplitude baseband)
      - Complete

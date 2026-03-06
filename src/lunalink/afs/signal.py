@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from lunalink.afs._afs import EPOCHS_PER_FRAME as EPOCHS_PER_FRAME
+from lunalink.afs._afs import INTERIM_ASSIGNMENT_MAX_PRN as INTERIM_ASSIGNMENT_MAX_PRN
 from lunalink.afs._afs import IQ_SAMPLES_PER_EPOCH as IQ_SAMPLES_PER_EPOCH
 from lunalink.afs._afs import IQ_UPSAMPLE_FACTOR as IQ_UPSAMPLE_FACTOR
 from lunalink.afs._afs import SECONDARY_CODE_COUNT as SECONDARY_CODE_COUNT
@@ -32,6 +33,7 @@ __all__ = [
     "EPOCHS_PER_FRAME",
     "SECONDARY_CODE_LENGTH",
     "SECONDARY_CODE_COUNT",
+    "INTERIM_ASSIGNMENT_MAX_PRN",
     "TERTIARY_CODE_LENGTH",
     "IQ_UPSAMPLE_FACTOR",
     "IQ_SAMPLES_PER_EPOCH",
@@ -141,7 +143,8 @@ def tiered_code_epoch(prn_id: int, epoch_idx: int) -> NDArray[np.uint8]:
     Parameters
     ----------
     prn_id : int
-        LNSP node identifier in [1, 210].
+        LNSP node identifier in [1, 12] for the default interim mapping.
+        For other PRNs, use ``tiered_code_epoch_assigned``.
     epoch_idx : int
         Primary code epoch index within the 12 s frame, in [0, 5999].
 
@@ -210,8 +213,9 @@ def multiplex_iq(
     """Multiplex AFS-I and AFS-Q into baseband IQ at 5.115 MSPS.
 
     AFS-I samples (2046) are upsampled 5x by sample-and-hold to match the
-    AFS-Q chip rate (10230), per LSIS-140 Table 7. Both channels have equal
-    amplitude (50/50 power per LSIS-103, Table 3).
+    AFS-Q chip rate (10230), per LSIS-140 Table 7. Channels are output with
+    equal normalized digital amplitude. Absolute power scaling per LSIS-103
+    and LSIS-130 is expected in downstream RF/payload stages.
 
     Parameters
     ----------

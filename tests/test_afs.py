@@ -5,6 +5,7 @@ import pytest
 
 from lunalink.afs import (
     EPOCHS_PER_FRAME,
+    INTERIM_ASSIGNMENT_MAX_PRN,
     IQ_SAMPLES_PER_EPOCH,
     IQ_UPSAMPLE_FACTOR,
     SECONDARY_CODE_COUNT,
@@ -186,6 +187,7 @@ class TestTieredCodeEpoch:
         assert EPOCHS_PER_FRAME == 6000
         assert SECONDARY_CODE_LENGTH == 4
         assert SECONDARY_CODE_COUNT == 4
+        assert INTERIM_ASSIGNMENT_MAX_PRN == 12
         assert TERTIARY_CODE_LENGTH == 1500
 
     def test_out_of_range_raises(self):
@@ -196,6 +198,8 @@ class TestTieredCodeEpoch:
             tiered_code_epoch(1, 6000)
         with pytest.raises((ValueError, Exception)):
             tiered_code_epoch(1, -1)
+        with pytest.raises((ValueError, Exception)):
+            tiered_code_epoch(13, 0)
 
     def test_assigned_matches_default_interim_mapping(self):
         """Explicit interim assignment matches tiered_code_epoch output."""

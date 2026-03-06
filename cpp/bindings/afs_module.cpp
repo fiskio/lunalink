@@ -71,9 +71,12 @@ PYBIND11_MODULE(_afs, m) {
         if (r.shape[0] > std::numeric_limits<uint16_t>::max())
           throw py::value_error("prn array exceeds maximum chip count (65535)");
         auto out = py::array_t<int8_t>(r.shape[0]);
-        modulate_bpsk_i(static_cast<const uint8_t *>(r.ptr),
-                        static_cast<uint16_t>(r.shape[0]),
-                        static_cast<int8_t>(data_symbol), out.mutable_data());
+        const auto status = modulate_bpsk_i(
+            static_cast<const uint8_t *>(r.ptr),
+            static_cast<uint16_t>(r.shape[0]), static_cast<int8_t>(data_symbol),
+            out.mutable_data());
+        if (status != ModulationStatus::kOk)
+          throw py::value_error("modulate_bpsk_i failed");
         return out;
       },
       py::arg("prn"), py::arg("data_symbol"),
@@ -82,8 +85,11 @@ PYBIND11_MODULE(_afs, m) {
   m.def(
       "tiered_code_epoch",
       [](int prn_id, int epoch_idx) -> py::array_t<uint8_t> {
-        if (prn_id < 1 || prn_id > kPrnCount)
-          throw py::value_error("prn_id must be in [1, 210]");
+        if (prn_id < 1 || prn_id > kInterimAssignmentMaxPrn) {
+          throw py::value_error(
+              "prn_id must be in [1, 12] for default interim mapping; "
+              "use tiered_code_epoch_assigned for other PRNs");
+        }
         if (epoch_idx < 0 || epoch_idx >= kEpochsPerFrame)
           throw py::value_error("epoch_idx must be in [0, 5999]");
         auto out = py::array_t<uint8_t>(kWeil10230ChipLength);
@@ -140,8 +146,11 @@ PYBIND11_MODULE(_afs, m) {
         if (r.shape[0] > std::numeric_limits<uint16_t>::max())
           throw py::value_error("chips array exceeds maximum chip count (65535)");
         auto out = py::array_t<int8_t>(r.shape[0]);
-        modulate_bpsk_q(static_cast<const uint8_t *>(r.ptr),
-                        static_cast<uint16_t>(r.shape[0]), out.mutable_data());
+        const auto status = modulate_bpsk_q(
+            static_cast<const uint8_t *>(r.ptr),
+            static_cast<uint16_t>(r.shape[0]), out.mutable_data());
+        if (status != ModulationStatus::kOk)
+          throw py::value_error("modulate_bpsk_q failed");
         return out;
       },
       py::arg("chips"),
@@ -176,6 +185,7 @@ PYBIND11_MODULE(_afs, m) {
   m.attr("EPOCHS_PER_FRAME") = kEpochsPerFrame;
   m.attr("SECONDARY_CODE_LENGTH") = kSecondaryCodeLength;
   m.attr("SECONDARY_CODE_COUNT") = kSecondaryCodeCount;
+  m.attr("INTERIM_ASSIGNMENT_MAX_PRN") = kInterimAssignmentMaxPrn;
   m.attr("TERTIARY_CODE_LENGTH") = kWeil1500ChipLength;
   m.attr("IQ_UPSAMPLE_FACTOR") = kIqUpsampleFactor;
   m.attr("IQ_SAMPLES_PER_EPOCH") = kIqSamplesPerEpoch;

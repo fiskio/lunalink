@@ -109,6 +109,16 @@ TEST_CASE("kEpochsPerFrame is 6000") {
   REQUIRE(kEpochsPerFrame == 6000);
 }
 
+TEST_CASE("default interim mapping only applies to PRN 1-12") {
+  std::array<uint8_t, kWeil10230ChipLength> out{};
+  out.fill(7U);
+  tiered_code_epoch(13, 0, out.data());
+  // Unsupported default mapping leaves output unchanged.
+  for (const auto v : out) {
+    REQUIRE(v == 7U);
+  }
+}
+
 TEST_CASE("tiered_code_epoch_checked rejects invalid inputs") {
   std::array<uint8_t, kWeil10230ChipLength> out{};
   auto a = default_tiered_assignment(1);

@@ -17,7 +17,8 @@ inline constexpr uint16_t kIqSamplesPerEpoch = kWeil10230ChipLength; // 10230
 /// to match the AFS-Q rate (kWeil10230ChipLength = 10230), per LSIS-140 Table 7:
 ///   I chip rate = 1.023 Mcps, Q chip rate = 5.115 Mcps, ratio = 5.
 ///
-/// Both channels have equal amplitude (50/50 power per LSIS-103, Table 3).
+/// Both channels are emitted at equal normalized digital amplitude.
+/// Absolute power scaling per LSIS-103/LSIS-130 is expected downstream.
 /// Output is interleaved [I0, Q0, I1, Q1, ...] as int16_t.
 ///
 /// Parameters:

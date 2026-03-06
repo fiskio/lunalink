@@ -38,8 +38,7 @@ bool tiered_code_epoch_checked(const TieredCodeAssignment &assignment,
 }
 
 void tiered_code_epoch(uint8_t prn_id, uint16_t epoch_idx, uint8_t *out) noexcept {
-  if (prn_id < 1U || prn_id > kPrnCount || epoch_idx >= kEpochsPerFrame ||
-      out == nullptr) {
+  if (!is_interim_prn(prn_id) || epoch_idx >= kEpochsPerFrame || out == nullptr) {
     return;
   }
   const auto assignment = default_tiered_assignment(prn_id);

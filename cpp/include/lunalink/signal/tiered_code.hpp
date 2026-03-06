@@ -9,6 +9,7 @@ namespace lunalink::signal {
 /// Secondary code definitions per LSIS V1.0 §2.3.5.3.2, Table 10.
 inline constexpr uint8_t kSecondaryCodeLength = 4;
 inline constexpr uint8_t kSecondaryCodeCount  = 4;
+inline constexpr uint8_t kInterimAssignmentMaxPrn = 12;
 
 // NOLINTNEXTLINE(hicpp-avoid-c-arrays)
 inline constexpr uint8_t kSecondaryCodes[4][4] = {
@@ -31,6 +32,11 @@ inline constexpr uint16_t kEpochsPerFrame =
   return static_cast<uint8_t>((prn_id - 1U) % kSecondaryCodeCount);
 }
 
+/// True when PRN is covered by LSIS V1.0 interim Table 11 mapping.
+[[nodiscard]] inline constexpr bool is_interim_prn(uint8_t prn_id) noexcept {
+  return prn_id >= 1U && prn_id <= kInterimAssignmentMaxPrn;
+}
+
 /// Tiered code component assignment for one LNSP node.
 struct TieredCodeAssignment {
   uint8_t  primary_prn;
@@ -42,6 +48,7 @@ struct TieredCodeAssignment {
 /// Build the interim test assignment from LSIS V1.0 Table 11.
 [[nodiscard]] inline constexpr TieredCodeAssignment
 default_tiered_assignment(uint8_t prn_id) noexcept {
+  assert(is_interim_prn(prn_id));
   return TieredCodeAssignment{
       prn_id,
       secondary_code_index(prn_id),
