@@ -180,12 +180,12 @@ TEST_CASE("frame_build_partial rejects undersized buffer") {
 
 TEST_CASE("frame_build_partial propagates BCH errors for invalid FID") {
   std::array<uint8_t, kFrameLength> frame{};
-  REQUIRE(frame_build_partial(4, 0, frame.data(), frame.size()) == FrameStatus::kBchFailed);
+  REQUIRE(frame_build_partial(4, 0, frame.data(), frame.size()) == FrameStatus::kInvalidFid);
 }
 
 TEST_CASE("frame_build_partial propagates BCH errors for invalid TOI") {
   std::array<uint8_t, kFrameLength> frame{};
-  REQUIRE(frame_build_partial(0, 100, frame.data(), frame.size()) == FrameStatus::kBchFailed);
+  REQUIRE(frame_build_partial(0, 100, frame.data(), frame.size()) == FrameStatus::kInvalidToi);
 }
 
 // ---------------------------------------------------------------------------

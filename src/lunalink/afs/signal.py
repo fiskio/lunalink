@@ -19,6 +19,7 @@ from lunalink.afs._afs import SECONDARY_CODE_LENGTH as SECONDARY_CODE_LENGTH
 from lunalink.afs._afs import SYMBOL_RATE as SYMBOL_RATE
 from lunalink.afs._afs import SYNC_LENGTH as SYNC_LENGTH
 from lunalink.afs._afs import TERTIARY_CODE_LENGTH as TERTIARY_CODE_LENGTH
+from lunalink.afs._afs import FrameStatus as FrameStatus
 from lunalink.afs._afs import bch_encode as _bch_encode
 from lunalink.afs._afs import frame_build_partial as _frame_build_partial
 from lunalink.afs._afs import modulate_i as _modulate_i
@@ -55,6 +56,7 @@ __all__ = [
     "TERTIARY_CODE_LENGTH",
     "IQ_UPSAMPLE_FACTOR",
     "IQ_SAMPLES_PER_EPOCH",
+    "FrameStatus",
 ]
 
 
@@ -85,29 +87,20 @@ def bch_encode(fid: int, toi: int) -> NDArray[np.uint8]:
 
 
 def frame_build_partial(fid: int, toi: int) -> NDArray[np.uint8]:
-    """Build a partial AFS navigation frame.
+    """Build a partial AFS navigation frame (§2.4).
 
     Layout: 68-symbol sync + 52-symbol BCH-encoded SB1 + 5880 zero-padded
-    symbols (placeholder for LDPC-encoded, interleaved SB2-SB4).
+    symbols (placeholder for LDPC-encoded, interleaved SB2–SB4).
 
-    Per LSIS V1.0 §2.4.1 (sync), §2.4.2 (SB1 BCH encoding).
+    Returns 6000 symbols as a uint8 array of {0, 1}.
 
-    Parameters
-    ----------
-    fid : int
-        Frame Identifier, in [0, 3].
-    toi : int
-        Time of Interval, in [0, 99].
+    Args:
+        fid: Frame Identifier (0–3)
+        toi: Time of Interval (0–99)
 
     Returns
     -------
-    numpy.ndarray
-        Shape (6000,), dtype uint8, values in {0, 1}.
-
-    Raises
-    ------
-    ValueError
-        If fid or toi is out of range.
+        NDArray[np.uint8]: The 6000-symbol frame.
     """
     return _frame_build_partial(fid, toi)
 

@@ -232,7 +232,16 @@ PYBIND11_MODULE(_afs, m) {
         return out;
       },
       py::arg("fid"), py::arg("toi"),
-      "Encode SB1 (FID + TOI) using BCH(51,8). Returns 52 symbols.");
+      "Encode SB1 (FID + TOI) using BCH(51,8) (§2.4.2.1). Returns 52 symbols.");
+
+  py::enum_<FrameStatus>(m, "FrameStatus")
+      .value("OK", FrameStatus::kOk)
+      .value("NULL_OUTPUT", FrameStatus::kNullOutput)
+      .value("OUTPUT_TOO_SMALL", FrameStatus::kOutputTooSmall)
+      .value("INVALID_FID", FrameStatus::kInvalidFid)
+      .value("INVALID_TOI", FrameStatus::kInvalidToi)
+      .value("BCH_FAILED", FrameStatus::kBchFailed)
+      .export_values();
 
   m.def(
       "frame_build_partial",
@@ -252,7 +261,7 @@ PYBIND11_MODULE(_afs, m) {
       },
       py::arg("fid"), py::arg("toi"),
       "Build a partial AFS navigation frame (sync + BCH SB1 + zero-padded "
-      "SB2-SB4). Returns 6000 symbols.");
+      "SB2-SB4) as defined in §2.4. Returns 6000 symbols.");
 
   m.attr("BCH_CODEWORD_LENGTH") = kBchCodewordLength;
   m.attr("FRAME_LENGTH") = kFrameLength;

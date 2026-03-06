@@ -15,6 +15,7 @@ from lunalink.afs.signal import (
     SYMBOL_RATE,
     SYNC_LENGTH,
     TERTIARY_CODE_LENGTH,
+    FrameStatus,
     bch_encode,
     frame_build_partial,
     modulate_i,
@@ -52,4 +53,5 @@ __all__ = [
     "TERTIARY_CODE_LENGTH",
     "IQ_UPSAMPLE_FACTOR",
     "IQ_SAMPLES_PER_EPOCH",
+    "FrameStatus",
 ]

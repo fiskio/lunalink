@@ -2,6 +2,7 @@
 
 #include "lunalink/signal/bch.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 namespace lunalink::signal {
@@ -35,20 +36,28 @@ FrameStatus frame_build_partial(
     return FrameStatus::kOutputTooSmall;
   }
 
-  // 1. Copy sync pattern (68 symbols).
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-  std::memcpy(out, kSyncPattern, kSyncLength);
+  // 1. Copy sync pattern (68 symbols) per §2.4.1.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  std::copy(kSyncPattern, kSyncPattern + kSyncLength, out);
 
-  // 2. BCH-encode SB1 into frame at offset 68.
+  // Validate FID and TOI ranges before encoding.
+  if (fid > 3) {
+    return FrameStatus::kInvalidFid;
+  }
+  if (toi > 99) {
+    return FrameStatus::kInvalidToi;
+  }
+
+  // 2. BCH-encode SB1 into frame at offset 68 per §2.4.2.1.
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   const auto bch_status = bch_encode(fid, toi, out + kSyncLength, kSb1Length);
   if (bch_status != BchStatus::kOk) {
     return FrameStatus::kBchFailed;
   }
 
-  // 3. Zero-pad SB2+SB3+SB4 payload (5880 symbols).
+  // 3. Zero-pad SB2+SB3+SB4 payload (5880 symbols) per §2.4.3.
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  std::memset(out + kSyncLength + kSb1Length, 0, kPayloadLength);
+  std::fill_n(out + kSyncLength + kSb1Length, kPayloadLength, static_cast<uint8_t>(0));
 
   return FrameStatus::kOk;
 }

@@ -15,6 +15,7 @@ inline constexpr uint16_t kPayloadLength = 5880;
 
 /// Total frame length: sync (68) + SB1 (52) + payload (5880) = 6000 symbols.
 inline constexpr uint16_t kFrameLength = 6000;
+static_assert(kFrameLength == kSyncLength + kSb1Length + kPayloadLength, "Frame length invariant broken");
 
 /// Symbol rate: 500 symbols per second.
 inline constexpr uint16_t kSymbolRate = 500;
@@ -32,6 +33,8 @@ enum class FrameStatus : uint8_t {
   kOk = 0,
   kNullOutput,
   kOutputTooSmall,
+  kInvalidFid,
+  kInvalidToi,
   kBchFailed,
 };
 
