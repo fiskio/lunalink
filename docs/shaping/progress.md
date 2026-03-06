@@ -32,9 +32,9 @@ Legend: Done / PR open / In progress / Not started / Deferred
 |------|-------------|-------|--------|------------|
 | C1 | Code loader (Gold-2046, Weil-10230, Weil-1500) | V1+V2 | Done | #2 merged |
 | C2 | BPSK modulator — AFS-I BPSK(1) | V1 | Done | V1 commit |
-| C2 | BPSK modulator — AFS-Q BPSK(5) | V2 | Not started | Same chip mapping, operates on tiered code output |
-| C3 | Tiered code combiner | V2 | PR open | #3 — includes TieredCodeAssignment struct |
-| C4 | IQ multiplexer (50/50 power, int16_t composite, >=10.23 MSPS) | V2 | Not started | Needs AFS-I 5x upsample to align with AFS-Q |
+| C2 | BPSK modulator — AFS-Q BPSK(5) | V2 | Done | C2-Q+C4 PR |
+| C3 | Tiered code combiner | V2 | Done | includes TieredCodeAssignment + explicit assignment API |
+| C4 | IQ multiplexer (50/50 power, 5.115 MSPS) | V2 | Done | C2-Q+C4 PR |
 
 ### Navigation message (TX)
 
@@ -66,7 +66,7 @@ Legend: Done / PR open / In progress / Not started / Deferred
 | Part | Description | Slice | Status | PR / Notes |
 |------|-------------|-------|--------|------------|
 | C12 | GNURadio OOT module + Pluto+ SDR | V6 | Deferred | spike-C12.md open |
-| C14 | pybind11 bindings | V1+ | Partial | C1+C2+C3 bound; grows with each part |
+| C14 | pybind11 bindings | V1+ | Partial | C1+C2+C3+C4 bound; grows with each part |
 | C15 | Web backend (FastAPI) | V6 | Deferred | |
 | C16 | Web frontend (Three.js) | V6 | Deferred | |
 
@@ -92,10 +92,8 @@ Legend: Done / PR open / In progress / Not started / Deferred
 
 ## What's next
 
-Priority order for V2 completion (after C3 merges):
+Priority order for V2 completion:
 
-1. **C2-Q** — BPSK(5) modulator for AFS-Q channel
-2. **C4** — IQ multiplexer (combines I+Q into composite baseband)
-3. **C5** — BCH(51,8) encoder
-4. **C8 partial** — Frame builder (sync + SB1 + zero-padded SB2-4)
-5. **Docs** — Compliance matrix, architecture page, SISICD draft, Spec Findings draft
+1. **C5** — BCH(51,8) encoder
+2. **C8 partial** — Frame builder (sync + SB1 + zero-padded SB2-4)
+3. **Docs** — Compliance matrix, architecture page, SISICD draft, Spec Findings draft

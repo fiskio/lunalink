@@ -6,14 +6,16 @@ shaping: true
 
 ## Timeline
 
-| Slice | Ends with |
-|-------|-----------|
-| V1 | AFS-I baseband signal generated and plotted (with correct chip mapping) |
-| V2 | Complete dual-channel AFS transmitter + architecture docs + SISICD draft + Spec Findings draft |
-| V3 | Full codec: encode + decode + CRC-24 + LDPC pipeline + interleaver/deinterleaver, all 22 MSG types |
-| V4 | Validation & Interop: test vectors, BER curves, SISICD final, Spec Findings final, cross-decode |
-| V5 | PNT pipeline: N satellites → composite IQ → correlator → position fix |
-| V6 | Demo: web app + optionally Pluto+ SDR (deferred) |
+| Slice | Ends with | Status |
+|-------|-----------|--------|
+| V1 | AFS-I baseband signal generated and plotted (with correct chip mapping) | Done |
+| V2 | Complete dual-channel AFS transmitter + architecture docs + SISICD draft + Spec Findings draft | In progress |
+| V3 | Full codec: encode + decode + CRC-24 + LDPC pipeline + interleaver/deinterleaver, all 22 MSG types | Not started |
+| V4 | Validation & Interop: test vectors, BER curves, SISICD final, Spec Findings final, cross-decode | Not started |
+| V5 | PNT pipeline: N satellites → composite IQ → correlator → position fix | Not started |
+| V6 | Demo: web app + optionally Pluto+ SDR | Deferred |
+
+All demos below are target end-states for each slice unless explicitly marked as already delivered.
 
 ---
 
@@ -39,9 +41,10 @@ expected 1.023 MHz null-to-null bandwidth. Tests pass at ≥90% coverage.
 
 ## V2 — Complete AFS Transmitter + Architecture Docs
 
-**Demo:** A single Python call generates a complete 12-second AFS baseband IQ frame for one
+**Target demo:** A single Python call generates a complete 12-second AFS baseband IQ frame for one
 LNSP node (PRN 1, Subframe 1 with BCH-encoded sync + minimal SB1 payload, SB2–SB4
-zero-padded). Output is a `complex64` numpy array. Plotting shows: IQ constellation (BPSK),
+zero-padded). Output API shape is TBD (candidate: interleaved IQ pairs or `complex64` array).
+Plotting shows: IQ constellation (BPSK),
 power spectrum (dual-channel, I at 1.023 MHz bandwidth, Q at 5.115 MHz), and chip sequence
 alignment between I and Q channels.
 
@@ -55,10 +58,10 @@ early for cross-team adoption).
 **Parts:**
 | Part | Mechanism |
 |------|-----------|
-| C1 | Complete: all three PRN table loaders (Gold-2046, Weil-10230, Weil-1500) |
-| C2 | Complete: BPSK(1) AFS-I + BPSK(5) AFS-Q modulator; chip mapping: logic 0 → +1, logic 1 → −1 (spec §2.3.3, Table 8) |
-| C3 | Tiered code combiner: XOR primary ⊕ secondary ⊕ tertiary → composite AFS-Q chip sequence; secondary codes S0–S3 assigned per PRN |
-| C4 | IQ multiplexer: scale I and Q to 50/50 power, sum into `int16_t` composite baseband buffer; ≥10.23 MSPS |
+| C1 | Planned end-state: all three PRN table loaders (Gold-2046, Weil-10230, Weil-1500) |
+| C2 | Planned end-state: BPSK(1) AFS-I + BPSK(5) AFS-Q modulator; chip mapping: logic 0 → +1, logic 1 → −1 (spec §2.3.3, Table 8) |
+| C3 | Tiered code combiner: XOR primary ⊕ secondary ⊕ tertiary → composite AFS-Q chip sequence; default interim mapping applies to PRN 1-12, with explicit assignment API for other PRNs |
+| C4 | IQ multiplexer: upsample I by 5 and output interleaved `int16_t` IQ pairs (`shape (10230,2)` in Python) with equal normalized digital amplitude; 5.115 MSPS/channel |
 | C5 | BCH(51,8) encoder: polynomial 763 (octal), GF(2) division; 52-symbol output — 51 encoded bits each XOR'd with SB1 bit 0, bit 0 prepended; static LUT |
 | C8 (partial) | Frame builder: prepend 68-symbol sync pattern (`CC63F74536F49E04A`) + BCH-encoded SB1 (52 symbols) + zero-padded SB2–SB4 into 12 s frame |
 | C14 | pybind11 bindings for C1–C5, C8 partial: `generate_frame(prn, secondary_code, payload)` → `np.ndarray` |
@@ -75,7 +78,7 @@ early for cross-team adoption).
 
 ## V3 — Full Navigation Message Codec
 
-**Demo:** End-to-end encode → decode round-trip for all 22 message types. The 8 spec-defined
+**Target demo:** End-to-end encode → decode round-trip for all 22 message types. The 8 spec-defined
 types (G1, G2, G4, G5, G8, G22, G24, G30) are tested with full bit-level fidelity: every
 field populated with representative values from the spec, round-tripped through the complete
 TX→RX pipeline, and verified bit-perfect against known-answer vectors. The 14 SISICD-defined
@@ -89,7 +92,7 @@ generates C++ static sparse arrays.
 **Parts:**
 | Part | Mechanism |
 |------|-----------|
-| C5 | Complete: BCH(51,8) codec — encoder (from V2) + correlation-based decoder (256 hypotheses, per spec §2.4.2.1) |
+| C5 | Planned end-state: BCH(51,8) codec — encoder (from V2) + correlation-based decoder (256 hypotheses, per spec §2.4.2.1) |
 | C6 | LDPC encoder: `p1 = B⁻¹·A·s mod 2`, `p2 = C·s + D·p1 mod 2`; filler bits appended (0 for SB2, 10 zeros for SB3/SB4); systematic puncturing: first z=240 (SB2) or z=176 (SB3/SB4) bits dropped; static arrays from `scripts/gen_ldpc_tables.py` reading 003a–003j CSVs |
 | C7 | LDPC decoder: punctured positions restored as LLR=0 erasures; min-sum BP, 50 iterations (compile-time constant), static LLR buffers ≤70 KB; no heap |
 | C8 | Frame builder/parser complete: **TX** — full SB2/SB3/SB4 LDPC encoding + 60×98 block interleaver + CRC-24 append + frame assembly. **RX** — sync detection, block deinterleaver (inverse 60×98), LDPC decode, CRC-24 check (G(X)=(1+X)·P(X), spec LSIS-FID0-467), BCH decode, message deserialise |
@@ -101,7 +104,7 @@ generates C++ static sparse arrays.
 
 ## V4 — Validation & Interoperability
 
-**Demo:** All competition M1+M2+M3 deliverables complete. Test vectors published: one complete
+**Target demo:** All competition M1+M2+M3 deliverables complete. Test vectors published: one complete
 encoded frame per MSG type in a documented binary format suitable for cross-team exchange.
 BER-vs-Eb/N₀ curves for SF2 and SF3 plotted against uncoded BPSK and Shannon limit. The
 full RX pipeline (deinterleaver → LDPC decode → CRC-24 → BCH decode → message deserialise)
@@ -123,7 +126,7 @@ successfully cross-decodes our own test vectors. SISICD and Spec Findings Report
 
 ## V5 — PNT Pipeline (should-have)
 
-**Demo:** A Python script simulates 6 LunaNet satellites in circular lunar orbit (100 km altitude,
+**Target demo:** A Python script simulates 6 LunaNet satellites in circular lunar orbit (100 km altitude,
 evenly spaced in inclination). Each satellite broadcasts a unique PRN with a MSG-G4 (clock +
 ephemeris) payload. The library generates the composite AFS-I IQ (6 signals summed + AWGN).
 The correlator acquires all 6 PRNs, extracts pseudoranges, and the PNT solver outputs a
@@ -144,7 +147,7 @@ Typical error: <1 m (no atmospheric corrections needed for Moon).
 
 ## V6 — Demo (deferred)
 
-**Demo:** Web app + optionally Pluto+ SDR. `task demo` launches the web app: Moon globe
+**Target demo:** Web app + optionally Pluto+ SDR. `task demo` launches the web app: Moon globe
 (Three.js) with satellite orbits, rover position, decoded message feed. If Pluto+ is
 connected, `task demo-sdr` adds real RF transmission at 2492.028 MHz with live FFT spectrum.
 
