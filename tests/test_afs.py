@@ -397,6 +397,24 @@ class TestBchEncode:
         """Different FID/TOI produce different codewords."""
         assert not np.array_equal(bch_encode(0, 1), bch_encode(0, 2))
 
+    def test_all_fid_values(self):
+        """All four FID values produce valid distinct codewords."""
+        cws = [bch_encode(fid, 42) for fid in range(4)]
+        for i, cw in enumerate(cws):
+            assert set(cw.tolist()).issubset({0, 1})
+            assert cw[0] == (i >> 1)  # bit0 = FID MSB
+        # All must be distinct.
+        for i in range(4):
+            for j in range(i + 1, 4):
+                assert not np.array_equal(cws[i], cws[j])
+
+    def test_bit0_xor_property(self):
+        """FID=2 (bit0=1) flips all 51 LFSR outputs vs FID=0 (bit0=0)."""
+        a = bch_encode(0, 69)
+        b = bch_encode(2, 69)
+        assert a[0] == 0 and b[0] == 1
+        np.testing.assert_array_equal(b[1:], 1 - a[1:])
+
     def test_invalid_fid_raises(self):
         """FID > 3 raises ValueError."""
         with pytest.raises((ValueError, Exception)):

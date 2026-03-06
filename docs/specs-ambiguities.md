@@ -63,3 +63,23 @@ This document records implementation assumptions where AD1 Vol-A (LSIS V1.0, 29 
 - Rationale:
   - Preserves explicit I/Q structure, avoids ambiguity with scalar ``I+Q``
     interpretations, and matches common SDR/DMA interface expectations.
+
+## 6. BCH(51,8) Generator Polynomial: Text vs. Diagram Mismatch
+
+- Spec context:
+  - Section 2.4.2.1 states the generator polynomial is "763 (octal)".
+  - 763₈ = 0b111110011 = x⁸+x⁷+x⁶+x⁵+x⁴+x+1.
+  - Figure 7 labels the polynomial as 1+X³+X⁴+X⁵+X⁶+X⁷+X⁸ (= 0b111111001 = 771₈).
+  - These differ at the x¹ vs x³ term.
+- Resolution:
+  - The Figure 8 test vector (SB1=0x045 → encoded=0x229f61dbb84a0) was used as
+    ground truth.
+  - A Fibonacci LFSR with the **Figure 7 polynomial** (1+X³+X⁴+X⁵+X⁶+X⁷+X⁸)
+    reproduces the test vector exactly.
+  - The text value "763 octal" does **not** reproduce the test vector under any
+    standard LFSR configuration (Galois or Fibonacci, forward or reversed state).
+- Assumption applied:
+  - The implementation uses the polynomial from Figure 7: 1+X³+X⁴+X⁵+X⁶+X⁷+X⁸.
+  - The text "763 (octal)" is treated as an editorial error.
+- Rationale:
+  - The test vector is the most authoritative evidence of intended behavior.
