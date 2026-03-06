@@ -62,10 +62,13 @@ TieredCodeStatus tiered_code_epoch_checked(const TieredCodeAssignment &assignmen
 
 TieredCodeStatus tiered_code_epoch(uint8_t prn_id, uint16_t epoch_idx,
                                    uint8_t *out) noexcept {
-  if (!is_interim_prn(prn_id)) {
-    return TieredCodeStatus::kInvalidPrn;
+  TieredCodeAssignment assignment{};
+  const auto assignment_status = default_tiered_assignment_checked(
+      prn_id,
+      &assignment);
+  if (assignment_status != TieredCodeStatus::kOk) {
+    return assignment_status;
   }
-  const auto assignment = default_tiered_assignment(prn_id);
   return tiered_code_epoch_checked(assignment, epoch_idx, out);
 }
 

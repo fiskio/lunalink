@@ -6,12 +6,19 @@
 using namespace lunalink::signal;
 
 TEST_CASE("secondary_code_index cycles through S0-S3") {
-  REQUIRE(secondary_code_index(1) == 0);  // S0
-  REQUIRE(secondary_code_index(2) == 1);  // S1
-  REQUIRE(secondary_code_index(3) == 2);  // S2
-  REQUIRE(secondary_code_index(4) == 3);  // S3
-  REQUIRE(secondary_code_index(5) == 0);  // S0 again
-  REQUIRE(secondary_code_index(12) == 3); // last in Table 11
+  uint8_t idx = 0;
+  REQUIRE(secondary_code_index_checked(1, &idx) == TieredCodeStatus::kOk);
+  REQUIRE(idx == 0);  // S0
+  REQUIRE(secondary_code_index_checked(2, &idx) == TieredCodeStatus::kOk);
+  REQUIRE(idx == 1);  // S1
+  REQUIRE(secondary_code_index_checked(3, &idx) == TieredCodeStatus::kOk);
+  REQUIRE(idx == 2);  // S2
+  REQUIRE(secondary_code_index_checked(4, &idx) == TieredCodeStatus::kOk);
+  REQUIRE(idx == 3);  // S3
+  REQUIRE(secondary_code_index_checked(5, &idx) == TieredCodeStatus::kOk);
+  REQUIRE(idx == 0);  // S0 again
+  REQUIRE(secondary_code_index_checked(12, &idx) == TieredCodeStatus::kOk);
+  REQUIRE(idx == 3); // last in Table 11
 }
 
 TEST_CASE("secondary codes match spec Table 10") {
@@ -129,7 +136,8 @@ TEST_CASE("default interim mapping only applies to PRN 1-12") {
 
 TEST_CASE("tiered_code_epoch_checked rejects invalid inputs") {
   std::array<uint8_t, kWeil10230ChipLength> out{};
-  auto a = default_tiered_assignment(1);
+  TieredCodeAssignment a{};
+  REQUIRE(default_tiered_assignment_checked(1, &a) == TieredCodeStatus::kOk);
 
   REQUIRE(tiered_code_epoch_checked(a, kEpochsPerFrame, out.data()) ==
           TieredCodeStatus::kInvalidEpoch);
@@ -142,7 +150,8 @@ TEST_CASE("tiered_code_epoch_checked rejects invalid inputs") {
 }
 
 TEST_CASE("tiered_code_epoch_checked supports tertiary phase offset") {
-  TieredCodeAssignment a0 = default_tiered_assignment(1);
+  TieredCodeAssignment a0{};
+  REQUIRE(default_tiered_assignment_checked(1, &a0) == TieredCodeStatus::kOk);
   TieredCodeAssignment a1 = a0;
   a1.tertiary_phase_offset = 1;
 
@@ -160,4 +169,17 @@ TEST_CASE("tiered_code_epoch_checked supports tertiary phase offset") {
   if (chip0 != chip1) {
     REQUIRE(out0 != out1);
   }
+}
+
+TEST_CASE("checked tiered helper APIs reject invalid inputs") {
+  uint8_t idx = 0;
+  REQUIRE(secondary_code_index_checked(0, &idx) == TieredCodeStatus::kInvalidPrn);
+  REQUIRE(secondary_code_index_checked(1, nullptr) ==
+          TieredCodeStatus::kNullOutput);
+
+  TieredCodeAssignment a{};
+  REQUIRE(default_tiered_assignment_checked(13, &a) ==
+          TieredCodeStatus::kInvalidPrn);
+  REQUIRE(default_tiered_assignment_checked(1, nullptr) ==
+          TieredCodeStatus::kNullOutput);
 }

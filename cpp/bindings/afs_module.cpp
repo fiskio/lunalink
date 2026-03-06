@@ -109,8 +109,15 @@ PYBIND11_MODULE(_afs, m) {
         if (epoch_idx < 0 || epoch_idx >= kEpochsPerFrame)
           throw py::value_error("epoch_idx must be in [0, 5999]");
         auto out = py::array_t<uint8_t>(kWeil10230ChipLength);
+        TieredCodeAssignment assignment{};
+        const auto assignment_status = default_tiered_assignment_checked(
+            static_cast<uint8_t>(prn_id),
+            &assignment);
+        if (assignment_status != TieredCodeStatus::kOk) {
+          throw py::value_error("invalid tiered code assignment");
+        }
         const auto status = tiered_code_epoch_checked(
-            default_tiered_assignment(static_cast<uint8_t>(prn_id)),
+            assignment,
             static_cast<uint16_t>(epoch_idx), out.mutable_data());
         if (status != TieredCodeStatus::kOk)
           throw py::value_error("invalid tiered code assignment");
