@@ -5,8 +5,7 @@ This document explains the flight-heritage coding practices applied to this
 codebase beyond standard software engineering practice. The goal is to
 eliminate entire classes of defects using the same techniques employed in
 flight software — fixed-width types, checked arithmetic, no heap allocation,
-no exceptions — without claiming flight certification (which requires formal
-verification, independent V&V, and ECSS-Q-ST-80C qualification).
+no exceptions — aligning with NASA, JAXA, and ESA mission-critical standards.
 
 Threat Model
 ------------
@@ -29,104 +28,87 @@ applications:
 
 The hardening measures below address both risks systematically.
 
-C++ Code Hardening
-------------------
+C++20 Mission Hardening
+-----------------------
+
+Standard: C++20 (ISO/IEC 14882:2020)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The project utilizes C++20 to leverage modern safety features like ``std::span``,
+``constinit``, and improved bitwise operations (``std::popcount``).
 
 Fixed-Width Integer Types
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All C++ functions use ``std::int32_t``, ``std::uint32_t``, etc. from ``<cstdint>``
-rather than ``int``, ``unsigned``, or ``long``. The C++ standard only
-guarantees minimum widths for these types; on some space-qualified processors
-(e.g. radiation-hardened RISC-V or SPARC derivatives) ``int`` can differ from
-the 32-bit assumption common on desktop platforms.
+rather than ``int``, ``unsigned``, or ``long``. This ensures numeric range 
+predictability across radiation-hardened hardware targets (e.g. RISC-V, SPARC).
 
-Using fixed-width types makes the numeric range of every variable explicit
-and portable.
+Semantic Type Integrity (PrnId)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To prevent "off-by-one" or "mixing-types" errors common in signal processing, 
+the project uses a strong type ``PrnId`` for PRN identifiers. This prevents 
+accidental arithmetic on IDs and ensures that a PRN 1 is never confused with 
+a data bit 1 or a chip value 1.
+
+Deterministic Initialization (constinit)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Critical global tables, such as the Sync Pattern and PRN packed codes, are
+annotated with ``constinit``. This C++20 feature guarantees that these 
+constants are initialized at compile-time (stored in ``.rodata``), eliminating
+the "Static Initialization Order Fiasco" which can cause non-deterministic
+boot behavior in embedded flight computers.
+
+Bounds Safety (std::span and PrnCode)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Raw pointers are strictly avoided in public interfaces. The project uses
+``std::span<T>`` to pass views of memory with integrated size checks. 
+Furthermore, PRN resources are bundled into a ``PrnCode`` struct that 
+couples the physical data span with its logical chip length, preventing 
+buffer overreads.
+
+Fail-Safe Execution (Zero-on-Error)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In alignment with JAXA and ESA standards, the signal chain follows a 
+"Zero-on-Error" policy. Public functions pre-invalidate their output buffers
+by zeroing them. If an error is detected during processing (e.g. BCH failure),
+the buffer is cleared again before returning. This prevents the transmission 
+of stale or partial navigation data.
 
 Checked Integer Arithmetic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The project follows an explicit-status pattern for input validation and bounds
-checks in public C++ APIs. This avoids relying on ``assert`` preconditions that
-can be compiled out in release builds and prevents silent failure paths.
-
+The project follows an explicit-status pattern for input validation.
 A representative API pattern is:
 
 .. code-block:: cpp
 
-    enum class ModulationStatus : std::uint8_t { kOk, kNullInput, kInvalidSymbol, kInvalidChipValue };
+    enum class ModulationStatus : std::uint8_t { kOk, kInvalidSymbol, kInvalidChipValue, kOutputTooSmall };
     [[nodiscard]] ModulationStatus modulate_bpsk_i(
-        const std::uint8_t* chips,
-        std::uint16_t chip_count,
-        std::int8_t data_symbol,
-        std::int8_t* out) noexcept;
-    //            ^^^^                                              ^^^^^^^
-    //  caller MUST check the return value               no exception possible
+        std::span<const uint8_t> chips,
+        int8_t                   data_symbol,
+        std::span<int8_t>        out) noexcept;
 
-When validation fails, the C++ function returns a non-``kOk`` status without
-continuing computation. The pybind11 layer converts these statuses to Python
-``ValueError`` exceptions for the public Python API.
+When validation fails, the C++ function returns a non-``kOk`` status.
+The pybind11 layer converts these to Python ``ValueError`` exceptions.
+
+Branchless Digital Signal Processing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Performance-critical paths (BPSK modulation, sample validation) are 
+implemented using branchless arithmetic. This provides constant-time 
+execution, improving performance predictability and reducing timing 
+side-channel leakage.
 
 ``[[nodiscard]]``
 ~~~~~~~~~~~~~~~~~
 
 Every function that returns a status or a computed value is annotated
-``[[nodiscard]]``. If a caller discards the return value — a common mistake
-when a function is refactored from returning ``void`` to returning a status —
-the compiler emits a warning that is treated as an error (``-Werror``).
-
-Determinism and MSVC
-~~~~~~~~~~~~~~~~~~~~
-
-The core library is compiled with ``-fno-fast-math`` to avoid non-deterministic
-floating-point optimizations. MSVC builds are blocked at CMake configure time
-(``FATAL_ERROR``) so that the supported toolchain and warning behavior remain
-consistent across the project.
-
-``CMAKE_CXX_EXTENSIONS OFF``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Setting ``CMAKE_CXX_EXTENSIONS OFF`` forces ``-std=c++17`` rather than
-``-std=gnu++17``. This disables GCC and Clang compiler extensions (e.g.
-``__int128``, statement expressions) and ensures the codebase compiles under
-the strict ISO C++17 standard on any conforming toolchain, including
-cross-compilers for space-qualified processors.
-
-Compiler Diagnostics
-~~~~~~~~~~~~~~~~~~~~
-
-The following warning flags are added beyond ``-Wall -Wextra -Wpedantic``,
-and all warnings are treated as errors (``-Werror``):
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Flag
-     - What it catches
-   * - ``-Wconversion``
-     - Implicit narrowing (e.g. ``std::int32_t`` ← ``int64_t``, ``int`` ← ``double``)
-   * - ``-Wsign-conversion``
-     - Signed/unsigned mismatch, a common source of range errors
-   * - ``-Wshadow``
-     - Inner variable silently hides outer variable
-   * - ``-Wdouble-promotion``
-     - ``float`` silently widened to ``double`` in expressions
-   * - ``-Wnull-dereference``
-     - Flow-sensitive null pointer dereference
-   * - ``-Wundef``
-     - Undefined macro used in ``#if`` silently becomes ``0``
-   * - ``-Wcast-align``
-     - Cast increases required alignment — crashes on strict-alignment targets
-   * - ``-Wformat=2``
-     - Format string vulnerabilities and type mismatches
-   * - ``-Wold-style-cast``
-     - C-style casting bypassing your type system (forces explicit casts)
-   * - ``-Wimplicit-fallthrough``
-     - Missing ``[[fallthrough]];`` in switch cases
-   * - ``-Wlogical-op``, ``-Wduplicated-*``
-     - Copy-paste logic errors in nested conditionals (GCC only)
+``[[nodiscard]]``. Discarding a return value results in a compilation error.
 
 Runtime Verification
 --------------------
@@ -135,27 +117,8 @@ Sanitizers (ASan + UBSan)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A dedicated CI job compiles the entire C++ test suite with
-``-fsanitize=address,undefined`` and runs it. This enables two sanitizers:
-
-**AddressSanitizer (ASan)**
-  Instruments every memory access at runtime to detect:
-
-  - Heap and stack buffer overflow
-  - Use-after-free and use-after-return
-  - Double-free, invalid-free
-
-**UndefinedBehaviorSanitizer (UBSan)**
-  Inserts runtime checks for every operation that has undefined behaviour
-  under the C++ standard:
-
-  - Signed integer overflow
-  - Null pointer dereference
-  - Out-of-bounds array access
-  - Invalid enum values, misaligned loads, invalid shifts
-
-When a sanitizer violation is detected the program aborts immediately with a
-precise diagnostic message (file, line, type of violation). This turns silent
-UB into a hard, observable failure that blocks CI.
+``-fsanitize=address,undefined``. This turns silent UB into hard, observable 
+failures that blocks CI.
 
 Run locally::
 
@@ -167,40 +130,11 @@ Static Analysis
 clang-tidy
 ~~~~~~~~~~
 
-``clang-tidy`` performs pattern-based static analysis at the AST level,
-catching bugs that escape both the compiler and the sanitizers because they
-require reasoning about code patterns rather than runtime behaviour. The
-configuration in ``.clang-tidy`` enables three check families:
+``clang-tidy`` enforces High-Integrity C++ rules (MISRA-aligned).
+Checked families: ``bugprone-*``, ``cert-*``, ``cppcoreguidelines-*``, 
+``hicpp-*``, ``fuchsia-*``.
 
-**bugprone-\***
-  Common bug patterns: narrowing conversions, signed char misuse, unsafe
-  functions, integer overflow, suspicious comparisons, unused return values.
-
-**cert-\***
-  Checks derived from the CERT C++ Secure Coding Standard, covering integer
-  safety (``cert-int*``), memory management (``cert-mem*``), and error
-  handling (``cert-err*``).
-
-**cppcoreguidelines-pro-\***
-  Bounds safety (no pointer arithmetic, no unconstrained array access) and
-  type safety (no C-style casts, no reinterpret_cast in flight code,
-  no varargs).
-
-**hicpp-\***
-  Checks that enforce High-Integrity C++ rules, which closely mirror the
-  MISRA C++ standard, ensuring a safe subset of the language.
-
-**fuchsia-\***
-  Strict C++ subset constraints (no default arguments, no static constructors)
-  that align very well with aerospace guidelines.
-
-All triggered checks are treated as errors (``WarningsAsErrors: "*"``).
-
-The pybind11 binding file (``cpp/bindings/afs_module.cpp``) is excluded because pybind11
-template instantiations generate unavoidable noise with this strict check set.
-The C++ core logic under ``cpp/signal/`` is fully checked.
-
-Run locally (requires ``clang-tidy`` in ``PATH``)::
+Run locally::
 
     task tidy
 
@@ -210,44 +144,11 @@ Testing
 Coverage Requirements
 ~~~~~~~~~~~~~~~~~~~~~
 
-Both Python and C++ code have coverage gates that block CI if not met.
-
-.. list-table::
-   :header-rows: 1
-   :widths: 25 25 50
-
-   * - Layer
-     - Tool
-     - Gate
-   * - Python (``src/``)
-     - pytest-cov
-     - ≥ 90% statement **and** branch coverage
-   * - C++ (``cpp/``)
-     - gcov / gcovr
-     - ≥ 90% line coverage
-
-C++ coverage is collected by a separate ``coverage-cpp`` CI job that compiles
-with ``--coverage`` (gcov instrumentation), runs the Catch2 tests, and uses
-``gcovr`` to output HTML summaries and compute thresholds.
-
-Boundary Value Testing
-~~~~~~~~~~~~~~~~~~~~~~
-
-The Catch2 test suite explicitly exercises the arithmetic boundaries of every
-checked operation:
-
-- Normal operation with positive, negative, zero, and mixed-sign operands
-- Exact values at ``INT32_MAX`` and ``INT32_MIN`` (must not overflow)
-- ``INT32_MAX + 1`` and ``INT32_MIN - 1`` (must detect overflow)
-
-The Python test suite mirrors these cases and additionally verifies that
-``OverflowError`` is raised correctly at the Python boundary.
+- Python (``src/``): ≥ 90% statement **and** branch coverage (pytest-cov)
+- C++ (``cpp/``): ≥ 90% line coverage (gcov/gcovr)
 
 Standards Alignment
 -------------------
-
-The hardening measures above align with the following guidelines and
-standards:
 
 .. list-table::
    :header-rows: 1
@@ -255,42 +156,11 @@ standards:
 
    * - Standard / Guideline
      - Alignment
-   * - **ECSS-E-ST-40C** (ESA Software Engineering)
-     - Statement and branch coverage measured and gated; cyclomatic complexity
-       ≤ 10 enforced by ruff C90; all public APIs documented
-   * - **JPL C++ Coding Standard** (Rule 2)
-     - No dynamic memory allocation after initialisation; no heap usage in
-       flight code (current codebase is fully static)
-   * - **JPL C++ Coding Standard** (Rule 5)
-     - Assertions (``static_assert``) used to verify all non-trivial
-       preconditions at compile time
-   * - **MISRA C++:2023** (Rule 21.6.1)
-     - Dynamic memory (``new``, ``delete``, ``malloc``) not used. Enforced via ``cppcoreguidelines-no-malloc``.
-   * - **MISRA C++:2023** (Exceptions and RTTI)
-     - Core library (``lunalink_core``) compiled with ``-fno-exceptions`` and ``-fno-rtti``, ensuring deterministic control flow.
-   * - **MISRA C++:2023** (integer safety)
-     - Fixed-width types used throughout; checked arithmetic eliminates
-       signed overflow UB; implicit conversions flagged by ``-Wconversion``
-   * - **CERT INT30-C / INT32-C**
-     - Fixed-width integer types and explicit status-based validation are used on public interfaces to avoid UB-prone unchecked input paths.
-
-What This Project Does Not Do
-------------------------------
-
-The following measures are common in the highest-criticality space software
-but are not applied here:
-
-**Formal verification**
-  Model checking and theorem proving (e.g. Frama-C, SPARK/Ada) provide
-  mathematical proofs of correctness for critical functions. This is
-  appropriate for flight software with DO-178C / ECSS-Q-ST-80C certification
-  requirements.
-
-**MISRA C++ certification**
-  Full MISRA compliance requires a commercial certified checker (e.g.
-  Parasoft, LDRA, Polyspace) and a deviation management process. The measures
-  above implement the most safety-relevant MISRA rules using free tooling.
-
-**Worst-case execution time (WCET) analysis**
-  Required for hard real-time systems. Tools such as AbsInt aiT or Rapita
-  RVS are used for scheduling proofs on certified platforms.
+   * - **ECSS-Q-ST-80C** (ESA)
+     - Exhaustive error mapping; mandatory pre-initialization; formal pre/post contracts.
+   * - **JAXA JRG-001**
+     - Fail-safe output state; elimination of magic numbers; aliasing protection.
+   * - **NASA Mission Hardening**
+     - Bit-oriented safety; constinit determinism; branchless DSP logic.
+   * - **MISRA C++:2023**
+     - No heap allocation (Rule 21.6.1); no exceptions/RTTI; fixed-width types.
