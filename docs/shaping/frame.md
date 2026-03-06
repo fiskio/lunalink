@@ -22,7 +22,7 @@ shaping: true
 
 ## Problem
 
-The `lunalink` Python/C++ package exists as a hardened foundation (ESA coding guidelines, sanitizers, clang-tidy, 90%+ coverage gates) but contains only a placeholder `add()` function. The actual LSIS-AFS signal — a GNSS-like lunar navigation broadcast at 2492.028 MHz — has not been implemented. The competition requires a credible, standards-traceable reference implementation and an interoperability demonstration.
+`lunalink` has moved beyond the bootstrap placeholder stage: core C++ signal-chain blocks for PRN loading (C1), BPSK modulation (C2), tiered-code composition (C3), and IQ multiplexing (C4) are implemented and tested. The primary gap is end-to-end navigation message codec and validation depth (BCH/LDPC encode+decode, full frame assembly/parsing, BER/interoperability evidence, and complete spec-traceable documentation). The competition now requires closing those gaps with auditable, standards-linked deliverables.
 
 ---
 

@@ -47,31 +47,26 @@ and portable.
 Checked Integer Arithmetic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Signed integer overflow is **undefined behaviour** in C++. The compiler may
-silently produce the wrong answer, or — more dangerously — eliminate
-surrounding code on the assumption that overflow never occurs. This is not a
-theoretical risk: it is a real class of mission-critical bug.
+The project follows an explicit-status pattern for input validation and bounds
+checks in public C++ APIs. This avoids relying on ``assert`` preconditions that
+can be compiled out in release builds and prevents silent failure paths.
 
-Example: ``add(INT32_MAX, 1)`` with naïve ``a + b`` compiles and runs with no
-warning, returning ``-2147483648`` silently.
-
-Every arithmetic operation that can overflow uses ``__builtin_add_overflow``
-(and its counterparts for subtraction and multiplication). This GCC/Clang
-intrinsic maps to a single hardware instruction on all supported targets
-(e.g. ``ADDO`` on SPARC, ``ADD`` + overflow flag test on x86/ARM) and has
-zero runtime overhead compared with unchecked arithmetic.
-
-The function signature encodes the overflow contract explicitly:
+A representative API pattern is:
 
 .. code-block:: cpp
 
-    [[nodiscard]] bool add(std::int32_t a, std::int32_t b, std::int32_t& result) noexcept;
+    enum class ModulationStatus : std::uint8_t { kOk, kNullInput, kInvalidSymbol, kInvalidChipValue };
+    [[nodiscard]] ModulationStatus modulate_bpsk_i(
+        const std::uint8_t* chips,
+        std::uint16_t chip_count,
+        std::int8_t data_symbol,
+        std::int8_t* out) noexcept;
     //            ^^^^                                              ^^^^^^^
     //  caller MUST check the return value               no exception possible
 
-When overflow is detected the C++ function returns ``false`` without touching
-``result``. The pybind11 binding layer converts this to a Python
-``OverflowError`` so Python callers receive a normal exception.
+When validation fails, the C++ function returns a non-``kOk`` status without
+continuing computation. The pybind11 layer converts these statuses to Python
+``ValueError`` exceptions for the public Python API.
 
 ``[[nodiscard]]``
 ~~~~~~~~~~~~~~~~~
@@ -81,21 +76,13 @@ Every function that returns a status or a computed value is annotated
 when a function is refactored from returning ``void`` to returning a status —
 the compiler emits a warning that is treated as an error (``-Werror``).
 
-``static_assert`` for Compile-Time Invariants
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Platform assumptions are verified at compile time so that a port to a new
-target fails loudly at the build stage rather than silently at runtime:
-
-.. code-block:: cpp
-
-    static_assert(CHAR_BIT == 8,        "char must be 8 bits");
-    static_assert(sizeof(std::int32_t) == 4, "std::int32_t must be exactly 32 bits");
-
 Determinism and MSVC
 ~~~~~~~~~~~~~~~~~~~~
 
-The core library is compiled with ``-fno-fast-math`` to guarantee strict IEEE 754 floating-point determinism across all targets and simulations. Floating point optimization shortcuts that sacrifice precision or reproducibility are explicitly blocked. Moreover, MSVC builds on Windows are blocked at the CMake level (``FATAL_ERROR``) because MSVC lacks the strict hardware-oriented zero-cost intrinsics (e.g. ``__builtin_add_overflow``) required for space-flight safety, ensuring developers cannot accidentally compile non-deterministic payloads.
+The core library is compiled with ``-fno-fast-math`` to avoid non-deterministic
+floating-point optimizations. MSVC builds are blocked at CMake configure time
+(``FATAL_ERROR``) so that the supported toolchain and warning behavior remain
+consistent across the project.
 
 ``CMAKE_CXX_EXTENSIONS OFF``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -161,7 +148,7 @@ A dedicated CI job compiles the entire C++ test suite with
   Inserts runtime checks for every operation that has undefined behaviour
   under the C++ standard:
 
-  - Signed integer overflow (the ``add`` function example above)
+  - Signed integer overflow
   - Null pointer dereference
   - Out-of-bounds array access
   - Invalid enum values, misaligned loads, invalid shifts
@@ -209,9 +196,9 @@ configuration in ``.clang-tidy`` enables three check families:
 
 All triggered checks are treated as errors (``WarningsAsErrors: "*"``).
 
-The pybind11 binding file (``cpp/example.cpp``) is excluded because pybind11
+The pybind11 binding file (``cpp/bindings/afs_module.cpp``) is excluded because pybind11
 template instantiations generate unavoidable noise with this strict check set.
-The C++ core logic (``cpp/example_core.cpp``) and tests are fully checked.
+The C++ core logic under ``cpp/signal/`` is fully checked.
 
 Run locally (requires ``clang-tidy`` in ``PATH``)::
 
@@ -280,12 +267,12 @@ standards:
    * - **MISRA C++:2023** (Rule 21.6.1)
      - Dynamic memory (``new``, ``delete``, ``malloc``) not used. Enforced via ``cppcoreguidelines-no-malloc``.
    * - **MISRA C++:2023** (Exceptions and RTTI)
-     - Core library (``lsis_afs_core``) compiled with ``-fno-exceptions`` and ``-fno-rtti``, ensuring deterministic control flow.
+     - Core library (``lunalink_core``) compiled with ``-fno-exceptions`` and ``-fno-rtti``, ensuring deterministic control flow.
    * - **MISRA C++:2023** (integer safety)
      - Fixed-width types used throughout; checked arithmetic eliminates
        signed overflow UB; implicit conversions flagged by ``-Wconversion``
    * - **CERT INT30-C / INT32-C**
-     - All integer operations that can overflow use ``__builtin_add_overflow``
+     - Fixed-width integer types and explicit status-based validation are used on public interfaces to avoid UB-prone unchecked input paths.
 
 What This Project Does Not Do
 ------------------------------
