@@ -51,7 +51,20 @@ def bch_encode(fid: int, toi: int) -> NDArray[np.uint8]:
     """Encode SB1 (FID + TOI) using BCH(51,8). Returns 52 symbols."""
     ...
 
+def frame_build_partial(fid: int, toi: int) -> NDArray[np.uint8]:
+    """Build a partial AFS navigation frame.
+
+    sync + BCH SB1 + zero-padded SB2-SB4. Returns 6000 symbols.
+    """
+    ...
+
 BCH_CODEWORD_LENGTH: int
+FRAME_LENGTH: int
+SYNC_LENGTH: int
+SB1_LENGTH: int
+PAYLOAD_LENGTH: int
+SYMBOL_RATE: int
+FRAME_DURATION_S: int
 EPOCHS_PER_FRAME: int
 SECONDARY_CODE_LENGTH: int
 SECONDARY_CODE_COUNT: int

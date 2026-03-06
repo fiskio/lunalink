@@ -41,7 +41,7 @@ Legend: Done / PR open / In progress / Not started / Deferred
 | Part | Description | Slice | Status | PR / Notes |
 |------|-------------|-------|--------|------------|
 | C5 | BCH(51,8) encoder | V2 | Done | Fibonacci LFSR, poly 1+X³+X⁴+X⁵+X⁶+X⁷+X⁸ (spec text says 763₈ but Figure 7 polynomial verified against Figure 8 test vector) |
-| C8 | Frame builder (partial: sync + BCH SB1 + zero-padded SB2-4) | V2 | Not started | 68-symbol sync + 52-symbol BCH + zero-pad |
+| C8 | Frame builder (partial: sync + BCH SB1 + zero-padded SB2-4) | V2 | Done | 68-symbol sync + 52-symbol BCH + zero-pad; 19 Catch2 tests; pybind11 bound |
 
 ### Navigation message (full codec)
 
@@ -95,5 +95,5 @@ Legend: Done / PR open / In progress / Not started / Deferred
 Priority order for V2 completion:
 
 1. ~~**C5** — BCH(51,8) encoder~~ Done
-2. **C8 partial** — Frame builder (sync + SB1 + zero-padded SB2-4)
+2. ~~**C8 partial** — Frame builder (sync + SB1 + zero-padded SB2-4)~~ Done
 3. **Docs** — Compliance matrix, architecture page, SISICD draft, Spec Findings draft

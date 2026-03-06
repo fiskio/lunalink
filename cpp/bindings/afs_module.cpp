@@ -1,4 +1,5 @@
 #include "lunalink/signal/bch.hpp"
+#include "lunalink/signal/frame.hpp"
 #include "lunalink/signal/iq_mux.hpp"
 #include "lunalink/signal/modulator.hpp"
 #include "lunalink/signal/prn.hpp"
@@ -233,5 +234,31 @@ PYBIND11_MODULE(_afs, m) {
       py::arg("fid"), py::arg("toi"),
       "Encode SB1 (FID + TOI) using BCH(51,8). Returns 52 symbols.");
 
+  m.def(
+      "frame_build_partial",
+      [](int fid, int toi) -> py::array_t<uint8_t> {
+        if (fid < 0 || fid > 3)
+          throw py::value_error("fid must be in [0, 3]");
+        if (toi < 0 || toi > 99)
+          throw py::value_error("toi must be in [0, 99]");
+        auto out = py::array_t<uint8_t>(kFrameLength);
+        const auto status = frame_build_partial(static_cast<uint8_t>(fid),
+                                                 static_cast<uint8_t>(toi),
+                                                 out.mutable_data(),
+                                                 kFrameLength);
+        if (status != FrameStatus::kOk)
+          throw py::value_error("frame_build_partial failed");
+        return out;
+      },
+      py::arg("fid"), py::arg("toi"),
+      "Build a partial AFS navigation frame (sync + BCH SB1 + zero-padded "
+      "SB2-SB4). Returns 6000 symbols.");
+
   m.attr("BCH_CODEWORD_LENGTH") = kBchCodewordLength;
+  m.attr("FRAME_LENGTH") = kFrameLength;
+  m.attr("SYNC_LENGTH") = kSyncLength;
+  m.attr("SB1_LENGTH") = kSb1Length;
+  m.attr("PAYLOAD_LENGTH") = kPayloadLength;
+  m.attr("SYMBOL_RATE") = kSymbolRate;
+  m.attr("FRAME_DURATION_S") = kFrameDurationS;
 }
