@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <span>
 
 #include "lunalink/signal/prn.hpp"
 
@@ -9,7 +10,7 @@ enum class TieredCodeStatus : uint8_t {
   kOk = 0,
   kInvalidPrn,
   kInvalidEpoch,
-  kNullOutput,
+  kOutputTooSmall,
   kInvalidAssignment,
 };
 
@@ -28,45 +29,54 @@ inline constexpr uint8_t kSecondaryCodes[4][4] = {
 
 /// Total primary epochs per 12 s frame: Ns × NT = 4 × 1500 = 6000.
 inline constexpr uint16_t kEpochsPerFrame =
-    static_cast<uint16_t>(static_cast<unsigned>(kSecondaryCodeLength) *
+    static_cast<uint16_t>(static_cast<uint32_t>(kSecondaryCodeLength) *
                           kWeil1500ChipLength);
 
-/// Return the secondary code index for a given PRN ID (1-indexed).
+/// Return the secondary code index for a given PRN ID.
 /// Per Table 11 interim assignments: PRN i → S_{(i-1) mod 4}.
-[[nodiscard]] inline constexpr TieredCodeStatus secondary_code_index_checked(
-    uint8_t  prn_id,
+[[nodiscard]] constexpr TieredCodeStatus secondary_code_index_checked(
+    PrnId    prn_id,
     uint8_t* out_idx) noexcept {
-  if (out_idx == nullptr) {
-    return TieredCodeStatus::kNullOutput;
+  if (out_idx == nullptr) [[unlikely]] {
+    return TieredCodeStatus::kInvalidAssignment;
   }
-  if (prn_id < 1U) {
+  if (!prn_id.valid()) [[unlikely]] {
     return TieredCodeStatus::kInvalidPrn;
   }
-  *out_idx = static_cast<uint8_t>((prn_id - 1U) % kSecondaryCodeCount);
+  *out_idx = static_cast<uint8_t>((static_cast<uint8_t>(prn_id) - 1U) % kSecondaryCodeCount);
   return TieredCodeStatus::kOk;
 }
 
 /// True when PRN is covered by LSIS V1.0 interim Table 11 mapping.
-[[nodiscard]] inline constexpr bool is_interim_prn(uint8_t prn_id) noexcept {
-  return prn_id >= 1U && prn_id <= kInterimAssignmentMaxPrn;
+[[nodiscard]] inline constexpr bool is_interim_prn(PrnId prn_id) noexcept {
+  return prn_id.valid() && static_cast<uint8_t>(prn_id) <= kInterimAssignmentMaxPrn;
 }
 
 /// Tiered code component assignment for one LNSP node.
 struct TieredCodeAssignment {
-  uint8_t  primary_prn;
-  uint8_t  secondary_code_idx;
-  uint8_t  tertiary_prn;
-  uint16_t tertiary_phase_offset;
+  PrnId    primary_prn = PrnId{1U};
+  uint8_t  secondary_code_idx = 0U;
+  PrnId    tertiary_prn = PrnId{1U};
+  uint16_t tertiary_phase_offset = 0U;
 };
 
+/// Validate an assignment.
+[[nodiscard]] inline constexpr bool valid_tiered_assignment(
+    const TieredCodeAssignment& a) noexcept {
+  return a.primary_prn.valid() &&
+         a.secondary_code_idx < kSecondaryCodeCount &&
+         a.tertiary_prn.valid() &&
+         a.tertiary_phase_offset < kWeil1500ChipLength;
+}
+
 /// Build the interim test assignment from LSIS V1.0 Table 11.
-[[nodiscard]] inline constexpr TieredCodeStatus default_tiered_assignment_checked(
-    uint8_t                prn_id,
-    TieredCodeAssignment*  out_assignment) noexcept {
-  if (out_assignment == nullptr) {
-    return TieredCodeStatus::kNullOutput;
+[[nodiscard]] constexpr TieredCodeStatus default_tiered_assignment_checked(
+    PrnId                 prn_id,
+    TieredCodeAssignment* out_assignment) noexcept {
+  if (out_assignment == nullptr) [[unlikely]] {
+    return TieredCodeStatus::kInvalidAssignment;
   }
-  if (!is_interim_prn(prn_id)) {
+  if (!is_interim_prn(prn_id)) [[unlikely]] {
     return TieredCodeStatus::kInvalidPrn;
   }
   uint8_t secondary_idx = 0;
@@ -85,39 +95,48 @@ struct TieredCodeAssignment {
   return TieredCodeStatus::kOk;
 }
 
-/// Validate an assignment.
-[[nodiscard]] inline constexpr bool valid_tiered_assignment(
-    const TieredCodeAssignment& a) noexcept {
-  return a.primary_prn >= 1U && a.primary_prn <= kPrnCount &&
-         a.secondary_code_idx < kSecondaryCodeCount &&
-         a.tertiary_prn >= 1U && a.tertiary_prn <= kPrnCount &&
-         a.tertiary_phase_offset < kWeil1500ChipLength;
-}
-
 /// Generate one primary epoch (10 230 chips) of the tiered AFS-Q code.
 ///
 /// For the given PRN and epoch index, produces:
 ///   out[i] = primary[i] XOR secondary[epoch % 4] XOR tertiary[epoch / 4]
-///
 /// per LSIS V1.0 §2.3.5.2 (C_Tiered = Cp ⊕ Cs ⊕ CT).
 ///
-/// Note: tertiary PRN phase offset is assumed to be 0 for all PRNs,
-/// matching the interim test assignments in Table 11 (LSIS-TBD-2001).
-///
-/// Parameters:
-///   prn_id    – LNSP node identifier (1–12 for default interim mapping)
-///   epoch_idx – primary code epoch within the 12 s frame [0, 5999]
-///   out       – caller-allocated buffer, length ≥ kWeil10230ChipLength
+/// @pre prn_id is valid
+/// @pre epoch_idx < kEpochsPerFrame (6000)
+/// @pre out.size() == kWeil10230ChipLength (10230)
+/// @post out is populated with valid tiered chips if kOk
+/// @complexity O(kWeil10230ChipLength)
 [[nodiscard]] TieredCodeStatus tiered_code_epoch(
-    uint8_t  prn_id,
-    uint16_t epoch_idx,
-    uint8_t* out) noexcept;
+    PrnId              prn_id,
+    uint16_t           epoch_idx,
+    std::span<uint8_t> out) noexcept;
 
-/// Checked variant with explicit assignment and phase offset.
-/// Returns explicit status and leaves output unchanged on invalid input.
+/// Checked version of tiered_code_epoch using a specific assignment.
+/// @pre valid_tiered_assignment(assignment)
+/// @pre epoch_idx < kEpochsPerFrame (6000)
+/// @pre out.size() == kWeil10230ChipLength (10230)
 [[nodiscard]] TieredCodeStatus tiered_code_epoch_checked(
     const TieredCodeAssignment& assignment,
     uint16_t                    epoch_idx,
-    uint8_t*                    out) noexcept;
+    std::span<uint8_t>          out) noexcept;
+
+/**
+ * @brief Ergonomic overloads.
+ */
+template <typename T>
+[[nodiscard]] inline TieredCodeStatus tiered_code_epoch(
+    PrnId    prn_id,
+    uint16_t epoch_idx,
+    T&&      out) noexcept {
+  return tiered_code_epoch(prn_id, epoch_idx, std::span<uint8_t>(out));
+}
+
+template <typename T>
+[[nodiscard]] inline TieredCodeStatus tiered_code_epoch_checked(
+    const TieredCodeAssignment& assignment,
+    uint16_t                    epoch_idx,
+    T&&                         out) noexcept {
+  return tiered_code_epoch_checked(assignment, epoch_idx, std::span<uint8_t>(out));
+}
 
 } // namespace lunalink::signal
