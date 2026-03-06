@@ -1,3 +1,4 @@
+#include "lunalink/signal/iq_mux.hpp"
 #include "lunalink/signal/modulator.hpp"
 #include "lunalink/signal/prn.hpp"
 #include "lunalink/signal/tiered_code.hpp"
@@ -130,8 +131,52 @@ PYBIND11_MODULE(_afs, m) {
       py::arg("epoch_idx"),
       "Return one primary epoch using explicit AFS-Q code assignments.");
 
+  m.def(
+      "modulate_q",
+      [](py::array_t<uint8_t, py::array::c_style> chips) -> py::array_t<int8_t> {
+        auto r = chips.request();
+        if (r.ndim != 1)
+          throw py::value_error("chips must be a 1-D array");
+        if (r.shape[0] > std::numeric_limits<uint16_t>::max())
+          throw py::value_error("chips array exceeds maximum chip count (65535)");
+        auto out = py::array_t<int8_t>(r.shape[0]);
+        modulate_bpsk_q(static_cast<const uint8_t *>(r.ptr),
+                        static_cast<uint16_t>(r.shape[0]), out.mutable_data());
+        return out;
+      },
+      py::arg("chips"),
+      "Modulate a chip sequence for AFS-Q pilot channel (BPSK(5), no data).");
+
+  m.def(
+      "multiplex_iq",
+      [](py::array_t<int8_t, py::array::c_style> i_samples,
+         py::array_t<int8_t, py::array::c_style> q_samples)
+          -> py::array_t<int16_t> {
+        auto ri = i_samples.request();
+        auto rq = q_samples.request();
+        if (ri.ndim != 1 || rq.ndim != 1)
+          throw py::value_error("i_samples and q_samples must be 1-D arrays");
+        if (ri.shape[0] != kGoldChipLength)
+          throw py::value_error("i_samples must have length 2046");
+        if (rq.shape[0] != kWeil10230ChipLength)
+          throw py::value_error("q_samples must have length 10230");
+        auto out = py::array_t<int16_t>(2 * kIqSamplesPerEpoch);
+        const bool ok = multiplex_iq(static_cast<const int8_t *>(ri.ptr),
+                                     static_cast<const int8_t *>(rq.ptr),
+                                     out.mutable_data());
+        if (!ok)
+          throw py::value_error("multiplex_iq failed");
+        return out.reshape({static_cast<py::ssize_t>(kIqSamplesPerEpoch),
+                            static_cast<py::ssize_t>(2)});
+      },
+      py::arg("i_samples"), py::arg("q_samples"),
+      "Multiplex AFS-I and AFS-Q into baseband IQ at 5.115 MSPS.\n\n"
+      "Returns shape (10230, 2) int16 array with columns [I, Q].");
+
   m.attr("EPOCHS_PER_FRAME") = kEpochsPerFrame;
   m.attr("SECONDARY_CODE_LENGTH") = kSecondaryCodeLength;
   m.attr("SECONDARY_CODE_COUNT") = kSecondaryCodeCount;
   m.attr("TERTIARY_CODE_LENGTH") = kWeil1500ChipLength;
+  m.attr("IQ_UPSAMPLE_FACTOR") = kIqUpsampleFactor;
+  m.attr("IQ_SAMPLES_PER_EPOCH") = kIqSamplesPerEpoch;
 }

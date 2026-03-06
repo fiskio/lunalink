@@ -16,4 +16,15 @@ void modulate_bpsk_i(
     int8_t*        out
 ) noexcept;
 
+/// Modulate chip sequence for AFS-Q pilot channel (BPSK(5), no data symbol).
+///   chips      - array of {0, 1}, length chip_count
+///   chip_count - number of chips (typically 10230 for one AFS-Q epoch)
+///   out        - caller-allocated, length >= chip_count
+/// Chip mapping per spec section 2.3.3, Table 8: logic 0 -> +1, logic 1 -> -1.
+void modulate_bpsk_q(
+    const uint8_t* chips,
+    uint16_t       chip_count,
+    int8_t*        out
+) noexcept;
+
 } // namespace lunalink::signal

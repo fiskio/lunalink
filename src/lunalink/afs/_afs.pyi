@@ -33,7 +33,20 @@ def tiered_code_epoch_assigned(
     """Return one primary epoch using explicit AFS-Q code assignments."""
     ...
 
+def modulate_q(chips: NDArray[np.uint8]) -> NDArray[np.int8]:
+    """Modulate a chip sequence for AFS-Q pilot channel (BPSK(5), no data)."""
+    ...
+
+def multiplex_iq(
+    i_samples: NDArray[np.int8],
+    q_samples: NDArray[np.int8],
+) -> NDArray[np.int16]:
+    """Multiplex AFS-I and AFS-Q into baseband IQ at 5.115 MSPS."""
+    ...
+
 EPOCHS_PER_FRAME: int
 SECONDARY_CODE_LENGTH: int
 SECONDARY_CODE_COUNT: int
 TERTIARY_CODE_LENGTH: int
+IQ_UPSAMPLE_FACTOR: int
+IQ_SAMPLES_PER_EPOCH: int
