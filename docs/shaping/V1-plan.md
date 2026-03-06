@@ -4,6 +4,9 @@ shaping: true
 
 # V1 Plan — AFS-I Signal Foundation
 
+> Historical planning note: this document captures the original V1 bootstrap plan.
+> Current implementation status is tracked in `docs/shaping/progress.md`.
+
 ## Demo
 
 ```python
