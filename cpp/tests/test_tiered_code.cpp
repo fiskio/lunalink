@@ -108,3 +108,30 @@ TEST_CASE("tiered_code_epoch different PRNs produce different sequences") {
 TEST_CASE("kEpochsPerFrame is 6000") {
   REQUIRE(kEpochsPerFrame == 6000);
 }
+
+TEST_CASE("tiered_code_epoch_checked rejects invalid inputs") {
+  std::array<uint8_t, kWeil10230ChipLength> out{};
+  auto a = default_tiered_assignment(1);
+
+  REQUIRE_FALSE(tiered_code_epoch_checked(a, kEpochsPerFrame, out.data()));
+  REQUIRE_FALSE(tiered_code_epoch_checked(a, 0, nullptr));
+
+  a.secondary_code_idx = 4;
+  REQUIRE_FALSE(tiered_code_epoch_checked(a, 0, out.data()));
+}
+
+TEST_CASE("tiered_code_epoch_checked supports tertiary phase offset") {
+  TieredCodeAssignment a0 = default_tiered_assignment(1);
+  TieredCodeAssignment a1 = a0;
+  a1.tertiary_phase_offset = 1;
+
+  std::array<uint8_t, kWeil10230ChipLength> out0{};
+  std::array<uint8_t, kWeil10230ChipLength> out1{};
+  REQUIRE(tiered_code_epoch_checked(a0, 0, out0.data()));
+  REQUIRE(tiered_code_epoch_checked(a1, 0, out1.data()));
+
+  const auto *tert = weil1500_prn_packed(1);
+  if (unpack_chip(tert, 0) != unpack_chip(tert, 1)) {
+    REQUIRE(out0 != out1);
+  }
+}

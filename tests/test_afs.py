@@ -5,9 +5,13 @@ import pytest
 
 from lunalink.afs import (
     EPOCHS_PER_FRAME,
+    SECONDARY_CODE_COUNT,
+    SECONDARY_CODE_LENGTH,
+    TERTIARY_CODE_LENGTH,
     modulate_i,
     prn_code,
     tiered_code_epoch,
+    tiered_code_epoch_assigned,
     weil1500_code,
     weil10230_code,
 )
@@ -176,6 +180,9 @@ class TestTieredCodeEpoch:
     def test_epochs_per_frame_constant(self):
         """EPOCHS_PER_FRAME is 6000 (4 secondary x 1500 tertiary)."""
         assert EPOCHS_PER_FRAME == 6000
+        assert SECONDARY_CODE_LENGTH == 4
+        assert SECONDARY_CODE_COUNT == 4
+        assert TERTIARY_CODE_LENGTH == 1500
 
     def test_out_of_range_raises(self):
         """Out-of-range inputs raise ValueError."""
@@ -185,3 +192,32 @@ class TestTieredCodeEpoch:
             tiered_code_epoch(1, 6000)
         with pytest.raises((ValueError, Exception)):
             tiered_code_epoch(1, -1)
+
+    def test_assigned_matches_default_interim_mapping(self):
+        """Explicit interim assignment matches tiered_code_epoch output."""
+        expected = tiered_code_epoch(1, 0)
+        actual = tiered_code_epoch_assigned(
+            primary_prn=1,
+            secondary_code_idx=0,
+            tertiary_prn=1,
+            tertiary_phase_offset=0,
+            epoch_idx=0,
+        )
+        np.testing.assert_array_equal(actual, expected)
+
+    def test_assigned_tertiary_phase_offset_applies(self):
+        """Changing tertiary phase offset affects output when chips differ."""
+        base = tiered_code_epoch_assigned(1, 0, 1, 0, 0)
+        shifted = tiered_code_epoch_assigned(1, 0, 1, 1, 0)
+        tertiary = weil1500_code(1)
+        if int(tertiary[0]) != int(tertiary[1]):
+            assert not np.array_equal(base, shifted)
+
+    def test_assigned_out_of_range_raises(self):
+        """Invalid explicit assignment values raise ValueError."""
+        with pytest.raises((ValueError, Exception)):
+            tiered_code_epoch_assigned(0, 0, 1, 0, 0)
+        with pytest.raises((ValueError, Exception)):
+            tiered_code_epoch_assigned(1, 4, 1, 0, 0)
+        with pytest.raises((ValueError, Exception)):
+            tiered_code_epoch_assigned(1, 0, 1, 1500, 0)

@@ -159,7 +159,7 @@ Implementation Status
      - BPSK modulator (AFS-I only)
      - V1 partial (AFS-I); AFS-Q in V2
    * - C3
-     - Tiered code combiner
+     - Tiered code combiner (interim mapping + explicit assignment API)
      - Complete
    * - C4
      - IQ multiplexer
