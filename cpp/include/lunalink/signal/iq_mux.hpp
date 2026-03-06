@@ -5,6 +5,13 @@
 
 namespace lunalink::signal {
 
+enum class IqMuxStatus : uint8_t {
+  kOk = 0,
+  kNullInput,
+  kInvalidISample,
+  kInvalidQSample,
+};
+
 /// Upsample factor: AFS-I chip rate x 5 = AFS-Q chip rate (LSIS-140, Table 7).
 inline constexpr uint8_t kIqUpsampleFactor = 5;
 
@@ -26,8 +33,8 @@ inline constexpr uint16_t kIqSamplesPerEpoch = kWeil10230ChipLength; // 10230
 ///   q_samples – AFS-Q modulated samples {-1, +1}, length = kWeil10230ChipLength
 ///   out       – caller-allocated interleaved IQ, length >= 2 * kIqSamplesPerEpoch
 ///
-/// Returns false if any input is null; leaves output unchanged.
-[[nodiscard]] bool multiplex_iq(
+/// Returns explicit status on input validation or processing errors.
+[[nodiscard]] IqMuxStatus multiplex_iq(
     const int8_t* i_samples,
     const int8_t* q_samples,
     int16_t*      out) noexcept;

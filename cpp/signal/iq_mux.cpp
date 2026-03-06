@@ -4,10 +4,22 @@
 
 namespace lunalink::signal {
 
-bool multiplex_iq(const int8_t *i_samples, const int8_t *q_samples,
-                  int16_t *out) noexcept {
+IqMuxStatus multiplex_iq(const int8_t *i_samples, const int8_t *q_samples,
+                         int16_t *out) noexcept {
   if (i_samples == nullptr || q_samples == nullptr || out == nullptr) {
-    return false;
+    return IqMuxStatus::kNullInput;
+  }
+  for (uint16_t n = 0; n < kGoldChipLength; ++n) {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic,bugprone-signed-char-misuse)
+    if (i_samples[n] != -1 && i_samples[n] != 1) {
+      return IqMuxStatus::kInvalidISample;
+    }
+  }
+  for (uint16_t n = 0; n < kWeil10230ChipLength; ++n) {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic,bugprone-signed-char-misuse)
+    if (q_samples[n] != -1 && q_samples[n] != 1) {
+      return IqMuxStatus::kInvalidQSample;
+    }
   }
 
   for (uint16_t n = 0; n < kIqSamplesPerEpoch; ++n) {
@@ -24,7 +36,7 @@ bool multiplex_iq(const int8_t *i_samples, const int8_t *q_samples,
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     out[idx + 1U] = q_val;
   }
-  return true;
+  return IqMuxStatus::kOk;
 }
 
 } // namespace lunalink::signal

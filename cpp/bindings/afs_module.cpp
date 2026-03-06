@@ -16,8 +16,12 @@ namespace {
 py::array_t<uint8_t> unpack_prn(const uint8_t *packed, uint16_t chip_length) {
   auto out = py::array_t<uint8_t>(chip_length);
   auto *dst = out.mutable_data();
-  for (uint16_t i = 0; i < chip_length; ++i)
-    dst[i] = unpack_chip(packed, i);
+  for (uint16_t i = 0; i < chip_length; ++i) {
+    const auto status = unpack_chip(packed, i, chip_length, &dst[i]);
+    if (status != PrnStatus::kOk) {
+      throw py::value_error("unpack_chip failed");
+    }
+  }
   return out;
 }
 
@@ -31,8 +35,12 @@ PYBIND11_MODULE(_afs, m) {
       [](int prn_id) -> py::array_t<uint8_t> {
         if (prn_id < 1 || prn_id > kPrnCount)
           throw py::value_error("prn_id must be in [1, 210]");
-        return unpack_prn(gold_prn_packed(static_cast<uint8_t>(prn_id)),
-                          kGoldChipLength);
+        const uint8_t *packed = nullptr;
+        if (gold_prn_packed(static_cast<uint8_t>(prn_id), &packed) !=
+            PrnStatus::kOk) {
+          throw py::value_error("invalid PRN ID");
+        }
+        return unpack_prn(packed, kGoldChipLength);
       },
       py::arg("prn_id"),
       "Return the Gold-2046 chip sequence for PRN prn_id (1-indexed).");
@@ -42,8 +50,12 @@ PYBIND11_MODULE(_afs, m) {
       [](int prn_id) -> py::array_t<uint8_t> {
         if (prn_id < 1 || prn_id > kPrnCount)
           throw py::value_error("prn_id must be in [1, 210]");
-        return unpack_prn(weil10230_prn_packed(static_cast<uint8_t>(prn_id)),
-                          kWeil10230ChipLength);
+        const uint8_t *packed = nullptr;
+        if (weil10230_prn_packed(static_cast<uint8_t>(prn_id), &packed) !=
+            PrnStatus::kOk) {
+          throw py::value_error("invalid PRN ID");
+        }
+        return unpack_prn(packed, kWeil10230ChipLength);
       },
       py::arg("prn_id"),
       "Return the Weil-10230 chip sequence for PRN prn_id (1-indexed).");
@@ -53,8 +65,12 @@ PYBIND11_MODULE(_afs, m) {
       [](int prn_id) -> py::array_t<uint8_t> {
         if (prn_id < 1 || prn_id > kPrnCount)
           throw py::value_error("prn_id must be in [1, 210]");
-        return unpack_prn(weil1500_prn_packed(static_cast<uint8_t>(prn_id)),
-                          kWeil1500ChipLength);
+        const uint8_t *packed = nullptr;
+        if (weil1500_prn_packed(static_cast<uint8_t>(prn_id), &packed) !=
+            PrnStatus::kOk) {
+          throw py::value_error("invalid PRN ID");
+        }
+        return unpack_prn(packed, kWeil1500ChipLength);
       },
       py::arg("prn_id"),
       "Return the Weil-1500 chip sequence for PRN prn_id (1-indexed).");
@@ -170,10 +186,10 @@ PYBIND11_MODULE(_afs, m) {
         if (rq.shape[0] != kWeil10230ChipLength)
           throw py::value_error("q_samples must have length 10230");
         auto out = py::array_t<int16_t>(2 * kIqSamplesPerEpoch);
-        const bool ok = multiplex_iq(static_cast<const int8_t *>(ri.ptr),
-                                     static_cast<const int8_t *>(rq.ptr),
-                                     out.mutable_data());
-        if (!ok)
+        const auto status = multiplex_iq(static_cast<const int8_t *>(ri.ptr),
+                                         static_cast<const int8_t *>(rq.ptr),
+                                         out.mutable_data());
+        if (status != IqMuxStatus::kOk)
           throw py::value_error("multiplex_iq failed");
         return out.reshape({static_cast<py::ssize_t>(kIqSamplesPerEpoch),
                             static_cast<py::ssize_t>(2)});

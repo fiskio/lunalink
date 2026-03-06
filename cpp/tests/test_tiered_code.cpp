@@ -39,16 +39,24 @@ TEST_CASE("tiered_code_epoch equals primary XOR secondary XOR tertiary") {
   // Manually compute expected result for PRN 1, epoch 0.
   // PRN 1 → S0 = {1, 1, 1, 0}; epoch 0 → secondary chip = S0[0] = 1
   // epoch 0 → tertiary chip index = 0/4 = 0
-  const auto *primary_packed = weil10230_prn_packed(1);
-  const auto *tertiary_packed = weil1500_prn_packed(1);
+  const uint8_t *primary_packed = nullptr;
+  const uint8_t *tertiary_packed = nullptr;
+  REQUIRE(weil10230_prn_packed(1, &primary_packed) == PrnStatus::kOk);
+  REQUIRE(weil1500_prn_packed(1, &tertiary_packed) == PrnStatus::kOk);
 
   const uint8_t sec_chip = kSecondaryCodes[0][0]; // S0[0] = 1
-  const uint8_t tert_chip = unpack_chip(tertiary_packed, 0);
+  uint8_t tert_chip = 0;
+  REQUIRE(unpack_chip(tertiary_packed, 0, kWeil1500ChipLength, &tert_chip) ==
+          PrnStatus::kOk);
 
   std::array<uint8_t, kWeil10230ChipLength> expected{};
-  for (uint16_t i = 0; i < kWeil10230ChipLength; ++i)
+  for (uint16_t i = 0; i < kWeil10230ChipLength; ++i) {
+    uint8_t primary_chip = 0;
+    REQUIRE(unpack_chip(primary_packed, i, kWeil10230ChipLength, &primary_chip) ==
+            PrnStatus::kOk);
     expected[i] =
-        static_cast<uint8_t>(unpack_chip(primary_packed, i) ^ sec_chip ^ tert_chip);
+        static_cast<uint8_t>(primary_chip ^ sec_chip ^ tert_chip);
+  }
 
   std::array<uint8_t, kWeil10230ChipLength> out{};
   REQUIRE(tiered_code_epoch(1, 0, out.data()) == TieredCodeStatus::kOk);
@@ -89,8 +97,13 @@ TEST_CASE("tiered_code_epoch changes across tertiary chip boundary") {
 
   // Same secondary chip (S0[0]=1 for both), so any difference must come
   // from the tertiary code (chip 0 vs chip 1).
-  const auto *tert = weil1500_prn_packed(1);
-  if (unpack_chip(tert, 0) != unpack_chip(tert, 1)) {
+  const uint8_t *tert = nullptr;
+  REQUIRE(weil1500_prn_packed(1, &tert) == PrnStatus::kOk);
+  uint8_t chip0 = 0;
+  uint8_t chip1 = 0;
+  REQUIRE(unpack_chip(tert, 0, kWeil1500ChipLength, &chip0) == PrnStatus::kOk);
+  REQUIRE(unpack_chip(tert, 1, kWeil1500ChipLength, &chip1) == PrnStatus::kOk);
+  if (chip0 != chip1) {
     // Tertiary chips differ → outputs must differ
     REQUIRE(e0 != e4);
   }
@@ -138,8 +151,13 @@ TEST_CASE("tiered_code_epoch_checked supports tertiary phase offset") {
   REQUIRE(tiered_code_epoch_checked(a0, 0, out0.data()) == TieredCodeStatus::kOk);
   REQUIRE(tiered_code_epoch_checked(a1, 0, out1.data()) == TieredCodeStatus::kOk);
 
-  const auto *tert = weil1500_prn_packed(1);
-  if (unpack_chip(tert, 0) != unpack_chip(tert, 1)) {
+  const uint8_t *tert = nullptr;
+  REQUIRE(weil1500_prn_packed(1, &tert) == PrnStatus::kOk);
+  uint8_t chip0 = 0;
+  uint8_t chip1 = 0;
+  REQUIRE(unpack_chip(tert, 0, kWeil1500ChipLength, &chip0) == PrnStatus::kOk);
+  REQUIRE(unpack_chip(tert, 1, kWeil1500ChipLength, &chip1) == PrnStatus::kOk);
+  if (chip0 != chip1) {
     REQUIRE(out0 != out1);
   }
 }

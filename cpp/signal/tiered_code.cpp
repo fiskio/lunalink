@@ -17,8 +17,16 @@ TieredCodeStatus tiered_code_epoch_checked(const TieredCodeAssignment &assignmen
     return TieredCodeStatus::kInvalidAssignment;
   }
 
-  const uint8_t *primary_packed = weil10230_prn_packed(assignment.primary_prn);
-  const uint8_t *tertiary_packed = weil1500_prn_packed(assignment.tertiary_prn);
+  const uint8_t *primary_packed = nullptr;
+  if (weil10230_prn_packed(assignment.primary_prn, &primary_packed) !=
+      PrnStatus::kOk) {
+    return TieredCodeStatus::kInvalidAssignment;
+  }
+  const uint8_t *tertiary_packed = nullptr;
+  if (weil1500_prn_packed(assignment.tertiary_prn, &tertiary_packed) !=
+      PrnStatus::kOk) {
+    return TieredCodeStatus::kInvalidAssignment;
+  }
 
   // Secondary chip for this epoch (one secondary chip per primary epoch).
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
@@ -30,15 +38,24 @@ TieredCodeStatus tiered_code_epoch_checked(const TieredCodeAssignment &assignmen
       (static_cast<uint16_t>(assignment.tertiary_phase_offset) +
        static_cast<uint16_t>(epoch_idx / kSecondaryCodeLength)) %
       kWeil1500ChipLength);
-  const uint8_t tert_chip = unpack_chip(tertiary_packed, tert_idx);
+  uint8_t tert_chip = 0;
+  if (unpack_chip(tertiary_packed, tert_idx, kWeil1500ChipLength, &tert_chip) !=
+      PrnStatus::kOk) {
+    return TieredCodeStatus::kInvalidAssignment;
+  }
 
   // For the entire epoch, sec_chip and tert_chip are constant, so the
   // modifier (sec XOR tert) is a single bit we XOR into every primary chip.
   const auto modifier = static_cast<uint8_t>(sec_chip ^ tert_chip);
 
   for (uint16_t i = 0; i < kWeil10230ChipLength; ++i) {
+    uint8_t primary_chip = 0;
+    if (unpack_chip(primary_packed, i, kWeil10230ChipLength, &primary_chip) !=
+        PrnStatus::kOk) {
+      return TieredCodeStatus::kInvalidAssignment;
+    }
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    out[i] = static_cast<uint8_t>(unpack_chip(primary_packed, i) ^ modifier);
+    out[i] = static_cast<uint8_t>(primary_chip ^ modifier);
   }
   return TieredCodeStatus::kOk;
 }

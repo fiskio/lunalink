@@ -7,6 +7,7 @@ enum class ModulationStatus : uint8_t {
   kOk = 0,
   kNullInput,
   kInvalidSymbol,
+  kInvalidChipValue,
 };
 
 /// Modulate chip sequence with a BPSK data symbol (AFS-I channel, BPSK(1)).

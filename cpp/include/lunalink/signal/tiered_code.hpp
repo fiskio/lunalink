@@ -94,7 +94,7 @@ default_tiered_assignment(uint8_t prn_id) noexcept {
     uint8_t* out) noexcept;
 
 /// Checked variant with explicit assignment and phase offset.
-/// Returns false if inputs are invalid and leaves output unchanged.
+/// Returns explicit status and leaves output unchanged on invalid input.
 [[nodiscard]] TieredCodeStatus tiered_code_epoch_checked(
     const TieredCodeAssignment& assignment,
     uint16_t                    epoch_idx,
