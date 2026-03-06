@@ -62,9 +62,9 @@ early for cross-team adoption).
 | C2 | Planned end-state: BPSK(1) AFS-I + BPSK(5) AFS-Q modulator; chip mapping: logic 0 → +1, logic 1 → −1 (spec §2.3.3, Table 8) |
 | C3 | Tiered code combiner: XOR primary ⊕ secondary ⊕ tertiary → composite AFS-Q chip sequence; default interim mapping applies to PRN 1-12, with explicit assignment API for other PRNs |
 | C4 | IQ multiplexer: upsample I by 5 and output interleaved `int16_t` IQ pairs (`shape (10230,2)` in Python) with equal normalized digital amplitude; 5.115 MSPS/channel |
-| C5 | BCH(51,8) encoder: polynomial 763 (octal), GF(2) division; 52-symbol output — 51 encoded bits each XOR'd with SB1 bit 0, bit 0 prepended; static LUT |
+| C5 | BCH(51,8) encoder: 8-stage Fibonacci LFSR with polynomial `1+X^3+X^4+X^5+X^6+X^7+X^8` (Figure-8-matching; see ambiguity note on text `763`), 52-symbol output — 51 encoded bits each XOR'd with SB1 bit 0, bit 0 prepended |
 | C8 (partial) | Frame builder: prepend 68-symbol sync pattern (`CC63F74536F49E04A`) + BCH-encoded SB1 (52 symbols) + zero-padded SB2–SB4 into 12 s frame |
-| C14 | pybind11 bindings for C1–C5, C8 partial: `generate_frame(prn, secondary_code, payload)` → `np.ndarray` |
+| C14 | pybind11 bindings for C1–C5 primitives (`prn_code`, `weil10230_code`, `weil1500_code`, `modulate_i`, `modulate_q`, `multiplex_iq`, `bch_encode`) |
 | — | Compliance matrix RST (all LSIS-001 through LSIS-xxx, mandatory/optional/implemented/TBD) |
 | — | Signal chain block diagram (Sphinx `.. graphviz::` or PNG) |
 | — | Architecture RST page: module layout, C++ API surface, design decisions |
