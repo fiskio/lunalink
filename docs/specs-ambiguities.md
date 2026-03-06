@@ -34,3 +34,32 @@ This document records implementation assumptions where AD1 Vol-A (LSIS V1.0, 29 
 - Rationale:
   - Keeps deterministic digital baseband generation separate from RF/payload power-control implementation.
 
+## 4. Safety Policy for Invalid Inputs in C++ APIs
+
+- Engineering context:
+  - In this project, silent failure is treated as a safety risk for signal-generation
+    software.
+- Assumption applied:
+  - Public C++ signal APIs use explicit status returns (enums) and ``[[nodiscard]]``
+    instead of assert-only preconditions for runtime input validation.
+  - Python bindings translate non-OK statuses into exceptions.
+- Rationale:
+  - Prevent undefined behavior in release builds and make all invalid-input handling
+    explicit and testable.
+
+## 5. Baseband IQ Digital Container Format
+
+- Spec context:
+  - LSIS-130 defines signal generation using distinct in-phase and quadrature
+    components (I and Q) in the modulation equation.
+  - The document does not prescribe a single in-memory software container format
+    for digital baseband sample transport between modules.
+- Assumption applied:
+  - C4 outputs baseband as interleaved IQ int16 pairs:
+    - ``[I0, Q0, I1, Q1, ...]`` in C++
+    - ``shape (10230, 2)`` in Python, columns ``[I, Q]``
+  - This is treated as a representation choice for the LSIS I/Q model, not a
+    change to the signal definition.
+- Rationale:
+  - Preserves explicit I/Q structure, avoids ambiguity with scalar ``I+Q``
+    interpretations, and matches common SDR/DMA interface expectations.
