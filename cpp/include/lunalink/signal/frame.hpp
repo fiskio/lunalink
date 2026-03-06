@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -40,7 +41,7 @@ enum class FrameStatus : uint8_t {
 
 /// The 68-symbol sync pattern as individual {0, 1} values.
 /// Source: hex CC63F74536F49E04A (LSIS V1.0 §2.4.1, Table 12).
-extern const uint8_t kSyncPattern[kSyncLength]; // NOLINT(hicpp-avoid-c-arrays)
+extern const std::array<uint8_t, kSyncLength> kSyncPattern;
 
 /// Build a partial AFS navigation frame (V2 stub).
 ///

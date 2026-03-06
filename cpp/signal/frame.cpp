@@ -3,14 +3,14 @@
 #include "lunalink/signal/bch.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 
 namespace lunalink::signal {
 
 // Sync pattern: CC63F74536F49E04A (hex), 68 bits MSB-first.
 // LSIS V1.0 §2.4.1, Table 12.
-// NOLINTNEXTLINE(hicpp-avoid-c-arrays)
-const uint8_t kSyncPattern[kSyncLength] = {
+const std::array<uint8_t, kSyncLength> kSyncPattern = {
     // C        C        6        3
     1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1,
     // F        7        4        5
@@ -37,8 +37,7 @@ FrameStatus frame_build_partial(
   }
 
   // 1. Copy sync pattern (68 symbols) per §2.4.1.
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay,cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  std::copy(kSyncPattern, kSyncPattern + kSyncLength, out);
+  std::copy(kSyncPattern.begin(), kSyncPattern.end(), out);
 
   // Validate FID and TOI ranges before encoding.
   if (fid > 3) {
