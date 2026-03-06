@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace lunalink::signal {
-// 2046 chips packed MSB-first into 256 bytes per PRN.
+// 10230 chips packed MSB-first into 1279 bytes per PRN.
 // NOLINTNEXTLINE(hicpp-avoid-c-arrays)
-extern const uint8_t kGoldPrnsPacked[210][256];
+extern const uint8_t kWeil10230PrnsPacked[210][1279];
 } // namespace lunalink::signal
