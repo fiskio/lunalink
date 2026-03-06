@@ -18,3 +18,10 @@ def weil1500_code(prn_id: int) -> NDArray[np.uint8]:
 def modulate_i(prn: NDArray[np.uint8], data_symbol: int) -> NDArray[np.int8]:
     """Modulate a chip sequence with a BPSK data symbol (AFS-I channel)."""
     ...
+
+def tiered_code_epoch(prn_id: int, epoch_idx: int) -> NDArray[np.uint8]:
+    """Return one primary epoch (10230 chips) of the tiered AFS-Q code."""
+    ...
+
+EPOCHS_PER_FRAME: int
+SECONDARY_CODE_LENGTH: int

@@ -1,5 +1,6 @@
 #include "lunalink/signal/modulator.hpp"
 #include "lunalink/signal/prn.hpp"
+#include "lunalink/signal/tiered_code.hpp"
 #include <cstdint>
 #include <limits>
 #include <pybind11/numpy.h>
@@ -76,4 +77,23 @@ PYBIND11_MODULE(_afs, m) {
       },
       py::arg("prn"), py::arg("data_symbol"),
       "Modulate a chip sequence with a BPSK data symbol (AFS-I channel).");
+
+  m.def(
+      "tiered_code_epoch",
+      [](int prn_id, int epoch_idx) -> py::array_t<uint8_t> {
+        if (prn_id < 1 || prn_id > kPrnCount)
+          throw py::value_error("prn_id must be in [1, 210]");
+        if (epoch_idx < 0 || epoch_idx >= kEpochsPerFrame)
+          throw py::value_error("epoch_idx must be in [0, 5999]");
+        auto out = py::array_t<uint8_t>(kWeil10230ChipLength);
+        tiered_code_epoch(static_cast<uint8_t>(prn_id),
+                          static_cast<uint16_t>(epoch_idx),
+                          out.mutable_data());
+        return out;
+      },
+      py::arg("prn_id"), py::arg("epoch_idx"),
+      "Return one primary epoch (10230 chips) of the tiered AFS-Q code.");
+
+  m.attr("EPOCHS_PER_FRAME") = kEpochsPerFrame;
+  m.attr("SECONDARY_CODE_LENGTH") = kSecondaryCodeLength;
 }
