@@ -1,5 +1,7 @@
 #include "lunalink/signal/modulator.hpp"
 #include "lunalink/signal/prn.hpp"
+#include <cstdint>
+#include <limits>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
@@ -64,6 +66,8 @@ PYBIND11_MODULE(_afs, m) {
         auto r = prn.request();
         if (r.ndim != 1)
           throw py::value_error("prn must be a 1-D array");
+        if (r.shape[0] > std::numeric_limits<uint16_t>::max())
+          throw py::value_error("prn array exceeds maximum chip count (65535)");
         auto out = py::array_t<int8_t>(r.shape[0]);
         modulate_bpsk_i(static_cast<const uint8_t *>(r.ptr),
                         static_cast<uint16_t>(r.shape[0]),
