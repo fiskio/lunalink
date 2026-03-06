@@ -139,7 +139,7 @@ TEST_CASE("multiplex_iq 50/50 power: I and Q have equal amplitude") {
           ModulationStatus::kOk);
 
   std::array<uint8_t, kWeil10230ChipLength> q_chips{};
-  tiered_code_epoch(1, 0, q_chips.data());
+  REQUIRE(tiered_code_epoch(1, 0, q_chips.data()) == TieredCodeStatus::kOk);
   std::array<int8_t, kWeil10230ChipLength> q_samples{};
   REQUIRE(modulate_bpsk_q(q_chips.data(), kWeil10230ChipLength, q_samples.data()) ==
           ModulationStatus::kOk);

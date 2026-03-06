@@ -30,7 +30,7 @@ TEST_CASE("secondary codes match spec Table 10") {
 
 TEST_CASE("tiered_code_epoch produces binary chip values") {
   std::array<uint8_t, kWeil10230ChipLength> out{};
-  tiered_code_epoch(1, 0, out.data());
+  REQUIRE(tiered_code_epoch(1, 0, out.data()) == TieredCodeStatus::kOk);
   for (auto v : out)
     REQUIRE(v <= 1u);
 }
@@ -51,7 +51,7 @@ TEST_CASE("tiered_code_epoch equals primary XOR secondary XOR tertiary") {
         static_cast<uint8_t>(unpack_chip(primary_packed, i) ^ sec_chip ^ tert_chip);
 
   std::array<uint8_t, kWeil10230ChipLength> out{};
-  tiered_code_epoch(1, 0, out.data());
+  REQUIRE(tiered_code_epoch(1, 0, out.data()) == TieredCodeStatus::kOk);
   REQUIRE(out == expected);
 }
 
@@ -60,8 +60,8 @@ TEST_CASE("tiered_code_epoch differs across secondary code boundary") {
   // unless tertiary also flips. But epoch 3 has S0[3]=0, so should differ.
   std::array<uint8_t, kWeil10230ChipLength> e0{};
   std::array<uint8_t, kWeil10230ChipLength> e3{};
-  tiered_code_epoch(1, 0, e0.data());
-  tiered_code_epoch(1, 3, e3.data());
+  REQUIRE(tiered_code_epoch(1, 0, e0.data()) == TieredCodeStatus::kOk);
+  REQUIRE(tiered_code_epoch(1, 3, e3.data()) == TieredCodeStatus::kOk);
 
   // S0 = {1,1,1,0}: epoch 0 sec=1, epoch 3 sec=0 → modifier differs
   // (assuming same tertiary chip since both are in tertiary chip 0)
@@ -84,8 +84,8 @@ TEST_CASE("tiered_code_epoch changes across tertiary chip boundary") {
   // chip (S0[0]=1) but different tertiary chips.
   std::array<uint8_t, kWeil10230ChipLength> e0{};
   std::array<uint8_t, kWeil10230ChipLength> e4{};
-  tiered_code_epoch(1, 0, e0.data());
-  tiered_code_epoch(1, 4, e4.data());
+  REQUIRE(tiered_code_epoch(1, 0, e0.data()) == TieredCodeStatus::kOk);
+  REQUIRE(tiered_code_epoch(1, 4, e4.data()) == TieredCodeStatus::kOk);
 
   // Same secondary chip (S0[0]=1 for both), so any difference must come
   // from the tertiary code (chip 0 vs chip 1).
@@ -100,8 +100,8 @@ TEST_CASE("tiered_code_epoch changes across tertiary chip boundary") {
 TEST_CASE("tiered_code_epoch different PRNs produce different sequences") {
   std::array<uint8_t, kWeil10230ChipLength> out1{};
   std::array<uint8_t, kWeil10230ChipLength> out2{};
-  tiered_code_epoch(1, 0, out1.data());
-  tiered_code_epoch(2, 0, out2.data());
+  REQUIRE(tiered_code_epoch(1, 0, out1.data()) == TieredCodeStatus::kOk);
+  REQUIRE(tiered_code_epoch(2, 0, out2.data()) == TieredCodeStatus::kOk);
   REQUIRE(out1 != out2);
 }
 
@@ -111,23 +111,21 @@ TEST_CASE("kEpochsPerFrame is 6000") {
 
 TEST_CASE("default interim mapping only applies to PRN 1-12") {
   std::array<uint8_t, kWeil10230ChipLength> out{};
-  out.fill(7U);
-  tiered_code_epoch(13, 0, out.data());
-  // Unsupported default mapping leaves output unchanged.
-  for (const auto v : out) {
-    REQUIRE(v == 7U);
-  }
+  REQUIRE(tiered_code_epoch(13, 0, out.data()) == TieredCodeStatus::kInvalidPrn);
 }
 
 TEST_CASE("tiered_code_epoch_checked rejects invalid inputs") {
   std::array<uint8_t, kWeil10230ChipLength> out{};
   auto a = default_tiered_assignment(1);
 
-  REQUIRE_FALSE(tiered_code_epoch_checked(a, kEpochsPerFrame, out.data()));
-  REQUIRE_FALSE(tiered_code_epoch_checked(a, 0, nullptr));
+  REQUIRE(tiered_code_epoch_checked(a, kEpochsPerFrame, out.data()) ==
+          TieredCodeStatus::kInvalidEpoch);
+  REQUIRE(tiered_code_epoch_checked(a, 0, nullptr) ==
+          TieredCodeStatus::kNullOutput);
 
   a.secondary_code_idx = 4;
-  REQUIRE_FALSE(tiered_code_epoch_checked(a, 0, out.data()));
+  REQUIRE(tiered_code_epoch_checked(a, 0, out.data()) ==
+          TieredCodeStatus::kInvalidAssignment);
 }
 
 TEST_CASE("tiered_code_epoch_checked supports tertiary phase offset") {
@@ -137,8 +135,8 @@ TEST_CASE("tiered_code_epoch_checked supports tertiary phase offset") {
 
   std::array<uint8_t, kWeil10230ChipLength> out0{};
   std::array<uint8_t, kWeil10230ChipLength> out1{};
-  REQUIRE(tiered_code_epoch_checked(a0, 0, out0.data()));
-  REQUIRE(tiered_code_epoch_checked(a1, 0, out1.data()));
+  REQUIRE(tiered_code_epoch_checked(a0, 0, out0.data()) == TieredCodeStatus::kOk);
+  REQUIRE(tiered_code_epoch_checked(a1, 0, out1.data()) == TieredCodeStatus::kOk);
 
   const auto *tert = weil1500_prn_packed(1);
   if (unpack_chip(tert, 0) != unpack_chip(tert, 1)) {

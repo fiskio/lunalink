@@ -6,6 +6,14 @@
 
 namespace lunalink::signal {
 
+enum class TieredCodeStatus : uint8_t {
+  kOk = 0,
+  kInvalidPrn,
+  kInvalidEpoch,
+  kNullOutput,
+  kInvalidAssignment,
+};
+
 /// Secondary code definitions per LSIS V1.0 §2.3.5.3.2, Table 10.
 inline constexpr uint8_t kSecondaryCodeLength = 4;
 inline constexpr uint8_t kSecondaryCodeCount  = 4;
@@ -80,14 +88,14 @@ default_tiered_assignment(uint8_t prn_id) noexcept {
 ///   prn_id    – LNSP node identifier (1–210)
 ///   epoch_idx – primary code epoch within the 12 s frame [0, 5999]
 ///   out       – caller-allocated buffer, length ≥ kWeil10230ChipLength
-void tiered_code_epoch(
+[[nodiscard]] TieredCodeStatus tiered_code_epoch(
     uint8_t  prn_id,
     uint16_t epoch_idx,
     uint8_t* out) noexcept;
 
 /// Checked variant with explicit assignment and phase offset.
 /// Returns false if inputs are invalid and leaves output unchanged.
-[[nodiscard]] bool tiered_code_epoch_checked(
+[[nodiscard]] TieredCodeStatus tiered_code_epoch_checked(
     const TieredCodeAssignment& assignment,
     uint16_t                    epoch_idx,
     uint8_t*                    out) noexcept;

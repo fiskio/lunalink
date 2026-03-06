@@ -93,10 +93,10 @@ PYBIND11_MODULE(_afs, m) {
         if (epoch_idx < 0 || epoch_idx >= kEpochsPerFrame)
           throw py::value_error("epoch_idx must be in [0, 5999]");
         auto out = py::array_t<uint8_t>(kWeil10230ChipLength);
-        const bool ok = tiered_code_epoch_checked(
+        const auto status = tiered_code_epoch_checked(
             default_tiered_assignment(static_cast<uint8_t>(prn_id)),
             static_cast<uint16_t>(epoch_idx), out.mutable_data());
-        if (!ok)
+        if (status != TieredCodeStatus::kOk)
           throw py::value_error("invalid tiered code assignment");
         return out;
       },
@@ -126,9 +126,9 @@ PYBIND11_MODULE(_afs, m) {
         a.tertiary_prn = static_cast<uint8_t>(tertiary_prn);
         a.tertiary_phase_offset = static_cast<uint16_t>(tertiary_phase_offset);
         auto out = py::array_t<uint8_t>(kWeil10230ChipLength);
-        const bool ok = tiered_code_epoch_checked(
+        const auto status = tiered_code_epoch_checked(
             a, static_cast<uint16_t>(epoch_idx), out.mutable_data());
-        if (!ok)
+        if (status != TieredCodeStatus::kOk)
           throw py::value_error("invalid tiered code assignment");
         return out;
       },
