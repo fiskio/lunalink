@@ -4,9 +4,17 @@
 
 namespace lunalink::signal {
 
-BchStatus bch_encode(uint8_t fid, uint8_t toi, uint8_t* out) noexcept {
+BchStatus bch_encode(
+    uint8_t     fid,
+    uint8_t     toi,
+    uint8_t*    out,
+    std::size_t out_len
+) noexcept {
   if (out == nullptr) {
     return BchStatus::kNullOutput;
+  }
+  if (out_len < kBchCodewordLength) {
+    return BchStatus::kOutputTooSmall;
   }
   if (fid > 3U) {
     return BchStatus::kInvalidFid;

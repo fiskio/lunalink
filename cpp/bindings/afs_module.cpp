@@ -224,7 +224,8 @@ PYBIND11_MODULE(_afs, m) {
         auto out = py::array_t<uint8_t>(kBchCodewordLength);
         const auto status = bch_encode(static_cast<uint8_t>(fid),
                                        static_cast<uint8_t>(toi),
-                                       out.mutable_data());
+                                       out.mutable_data(),
+                                       kBchCodewordLength);
         if (status != BchStatus::kOk)
           throw py::value_error("bch_encode failed");
         return out;

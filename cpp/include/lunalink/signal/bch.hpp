@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 
 namespace lunalink::signal {
@@ -15,6 +16,7 @@ inline constexpr uint8_t kSb1BitCount = 9;
 enum class BchStatus : uint8_t {
   kOk = 0,
   kNullOutput,
+  kOutputTooSmall,
   kInvalidFid,
   kInvalidToi,
 };
@@ -30,10 +32,12 @@ enum class BchStatus : uint8_t {
 /// @param fid  Frame Identifier (0-3, 2 bits)
 /// @param toi  Time of Interval (0-99, 7 bits)
 /// @param out  Caller-allocated buffer, length >= 52, values in {0, 1}
+/// @param out_len  Number of bytes available at @p out
 [[nodiscard]] BchStatus bch_encode(
-    uint8_t  fid,
-    uint8_t  toi,
-    uint8_t* out
+    uint8_t       fid,
+    uint8_t       toi,
+    uint8_t*      out,
+    std::size_t   out_len
 ) noexcept;
 
 } // namespace lunalink::signal
