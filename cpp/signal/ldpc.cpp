@@ -46,7 +46,7 @@ template <typename T_out>
       wip_tick();
     }
 
-    if (acc != static_cast<uint8_t>(~acc_mir)) [[unlikely]] {
+    if (acc != static_cast<uint8_t>(~acc_mir)) {
       success = false;
     }
     out[r] = static_cast<T_out>(acc & 1U);
@@ -111,7 +111,7 @@ LdpcStatus ldpc_encode(LdpcSubframe type, std::span<const uint8_t> msg,
                         std::span<uint8_t> out) noexcept {
   LdpcStatus status = LdpcStatus::kOk;
 
-  if (msg.size() != 200 || !validate_bits(msg)) [[unlikely]] {
+  if (msg.size() != 200 || !validate_bits(msg)) {
     status = LdpcStatus::kInvalidInput;
   } else {
     const bool is_sf2 = (type == LdpcSubframe::kSF2);
@@ -124,7 +124,7 @@ LdpcStatus ldpc_encode(LdpcSubframe type, std::span<const uint8_t> msg,
     const auto filler_count =
         is_sf2 ? static_cast<uint8_t>(0U) : static_cast<uint8_t>(10U);
 
-    if (out.size() < N_output) [[unlikely]] {
+    if (out.size() < N_output) {
       status = LdpcStatus::kOutputTooSmall;
     } else {
       const LdpcCsrMatrix& mA = is_sf2 ? kLdpc_sf2_a : kLdpc_sf3_a;
@@ -133,7 +133,7 @@ LdpcStatus ldpc_encode(LdpcSubframe type, std::span<const uint8_t> msg,
       const LdpcCsrMatrix& mD = is_sf2 ? kLdpc_sf2_d : kLdpc_sf3_d;
 
       if (!mA.verify_integrity() || !mBinv.verify_integrity() ||
-          !mC.verify_integrity() || !mD.verify_integrity()) [[unlikely]] {
+          !mC.verify_integrity() || !mD.verify_integrity()) {
         status = LdpcStatus::kFaultDetected;
       } else {
         std::array<uint8_t, 1200> s{};

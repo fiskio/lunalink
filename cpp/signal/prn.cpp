@@ -19,7 +19,7 @@ PrnStatus gold_prn_packed(PrnId prn_id, PrnCode& out) noexcept {
     status = PrnStatus::kInvalidPrn;
   } else {
     // Each Gold PRN is 2046 chips -> 256 bytes packed.
-    const size_t idx = static_cast<size_t>(prn_id.value()) - 1U;
+    const size_t idx = static_cast<size_t>(prn_id.repair()) - 1U;
     out.data = std::span(kGoldPrnsPacked.at(idx));
     out.chip_length = kGoldChipLength;
   }
@@ -35,7 +35,7 @@ PrnStatus weil10230_prn_packed(PrnId prn_id, PrnCode& out) noexcept {
     status = PrnStatus::kInvalidPrn;
   } else {
     // Each Weil-10230 PRN is 10230 chips -> 1279 bytes packed.
-    const size_t idx = static_cast<size_t>(prn_id.value()) - 1U;
+    const size_t idx = static_cast<size_t>(prn_id.repair()) - 1U;
     out.data = std::span(kWeil10230PrnsPacked.at(idx));
     out.chip_length = kWeil10230ChipLength;
   }
@@ -51,7 +51,7 @@ PrnStatus weil1500_prn_packed(PrnId prn_id, PrnCode& out) noexcept {
     status = PrnStatus::kInvalidPrn;
   } else {
     // Each Weil-1500 PRN is 1500 chips -> 188 bytes packed.
-    const size_t idx = static_cast<size_t>(prn_id.value()) - 1U;
+    const size_t idx = static_cast<size_t>(prn_id.repair()) - 1U;
     out.data = std::span(kWeil1500PrnsPacked.at(idx));
     out.chip_length = kWeil1500ChipLength;
   }

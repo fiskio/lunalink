@@ -112,6 +112,7 @@ struct TmrValue {
    * @brief Perform majority vote and repair the corrupted copy.
    * Constant-time complexity (branchless if possible, but repair requires
    * assignment).
+   * @note Not constexpr because it performs active repair on mutable members.
    */
   [[nodiscard]] T vote() const noexcept {
     if (v1 == v2) {
@@ -130,11 +131,22 @@ struct TmrValue {
     return v1;
   }
 
+  /**
+   * @brief Passive majority vote for constexpr contexts.
+   * Does NOT perform active repair.
+   */
+  [[nodiscard]] constexpr T peek() const noexcept {
+    if (v1 == v2 || v1 == v3) {
+      return v1;
+    }
+    return v2;
+  }
+
   constexpr void refresh(T v) noexcept { v1 = v2 = v3 = v; }
 
   // NOLINTNEXTLINE(fuchsia-overloaded-operator)
   constexpr bool operator==(const TmrValue& other) const noexcept {
-    return vote() == other.vote();
+    return peek() == other.peek();
   }
 
   /**

@@ -1,5 +1,6 @@
 #include "lunalink/signal/safety.hpp"
 #include "lunalink/signal/bch.hpp"
+#include "lunalink/signal/prn.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <cstring>
@@ -22,20 +23,33 @@ TEST_CASE("CheckedRange: saturation boundaries") {
   r3 = 0;
   CHECK(r3.value() == 10);
   
+  // Assignment saturation boundaries
+  r3 = 10;
+  CHECK(r3.value() == 10);
+  r3 = 20;
+  CHECK(r3.value() == 20);
+  r3 = 11;
+  CHECK(r3.value() == 11);
+  r3 = 19;
+  CHECK(r3.value() == 19);
+  
   // Implicit conversion
   uint8_t val = r3;
-  CHECK(val == 10);
+  CHECK(val == 19);
 }
 
 TEST_CASE("TmrValue: voting logic (2-of-3) and active repair") {
   TmrValue<uint8_t> v(100);
-  CHECK(v.vote() == 100);
+  CHECK(v.peek() == 100);
   
   // Single flip in v1
   v.v1 = 200;
   CHECK(v.v1 == 200);
+  CHECK(v.peek() == 100);
+  CHECK(v.v1 == 200); // peek() does NOT repair
+  
   CHECK(v.vote() == 100);
-  CHECK(v.v1 == 100); // Verify repair
+  CHECK(v.v1 == 100); // vote() DOES repair
   
   // Single flip in v2
   v.refresh(100);
@@ -52,14 +66,34 @@ TEST_CASE("TmrValue: voting logic (2-of-3) and active repair") {
   // Two flips (same value) -> value changes
   v.v1 = 200;
   v.v2 = 200;
-  CHECK(v.vote() == 200);
+  CHECK(v.peek() == 200);
   
   // Refresh restores all copies
   v.refresh(50);
   CHECK(v.v1 == 50);
   CHECK(v.v2 == 50);
   CHECK(v.v3 == 50);
-  CHECK(v.vote() == 50);
+  CHECK(v.peek() == 50);
+}
+
+TEST_CASE("Fid/Toi/PrnId: repair coverage") {
+    Fid f(1);
+    f.storage.v1 = 10;
+    CHECK(f.value() == 1);
+    CHECK(f.repair() == 1);
+    CHECK(f.storage.v1 == 1);
+
+    Toi t(69);
+    t.storage.v1 = 0;
+    CHECK(t.value() == 69);
+    CHECK(t.repair() == 69);
+    CHECK(t.storage.v1 == 69);
+
+    PrnId p(42);
+    p.storage.v1 = 200;
+    CHECK(p.value() == 42);
+    CHECK(p.repair() == 42);
+    CHECK(p.storage.v1 == 42);
 }
 
 TEST_CASE("secure_scrub: verify memory is zeroed") {

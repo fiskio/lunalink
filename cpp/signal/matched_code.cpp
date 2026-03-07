@@ -31,24 +31,24 @@ MatchedCodeStatus matched_code_epoch_checked(
     secure_scrub(out);
   }
 
-  if (out.size() < kWeil10230ChipLength) [[unlikely]] {
+  if (out.size() < kWeil10230ChipLength) {
     status = MatchedCodeStatus::kOutputTooSmall;
-  } else if (epoch_idx >= kEpochsPerFrame) [[unlikely]] {
+  } else if (epoch_idx >= kEpochsPerFrame) {
     status = MatchedCodeStatus::kInvalidEpoch;
-  } else if (!valid_matched_assignment(assignment)) [[unlikely]] {
+  } else if (!valid_matched_assignment(assignment)) {
     status = MatchedCodeStatus::kInvalidAssignment;
   }
 
   if (status == MatchedCodeStatus::kOk) {
     PrnCode primary_code;
     if (weil10230_prn_packed(assignment.primary_prn, primary_code) !=
-        PrnStatus::kOk) [[unlikely]] {
+        PrnStatus::kOk) {
       status = MatchedCodeStatus::kInvalidAssignment;
     }
     
     PrnCode tertiary_code;
     if (status == MatchedCodeStatus::kOk && weil1500_prn_packed(assignment.tertiary_prn, tertiary_code) !=
-        PrnStatus::kOk) [[unlikely]] {
+        PrnStatus::kOk) {
       status = MatchedCodeStatus::kInvalidAssignment;
     }
 
@@ -66,7 +66,7 @@ MatchedCodeStatus matched_code_epoch_checked(
           kWeil1500ChipLength);
       uint8_t tert_chip = 0;
       if (unpack_chip(tertiary_code, tert_idx, tert_chip) !=
-          PrnStatus::kOk) [[unlikely]] {
+          PrnStatus::kOk) {
         status = MatchedCodeStatus::kInvalidAssignment;
       }
 
@@ -100,7 +100,7 @@ MatchedCodeStatus matched_code_epoch_checked(
         }
         
         // CFI: Control-Flow Integrity check for loop terminal count.
-        if (byte_count != kWeil10230FullBytes) [[unlikely]] {
+        if (byte_count != kWeil10230FullBytes) {
             status = MatchedCodeStatus::kFaultDetected;
         }
 
@@ -117,7 +117,7 @@ MatchedCodeStatus matched_code_epoch_checked(
     }
   }
 
-  if (status != MatchedCodeStatus::kOk) [[unlikely]] {
+  if (status != MatchedCodeStatus::kOk) {
     secure_scrub(out);
   }
 

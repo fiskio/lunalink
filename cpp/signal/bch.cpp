@@ -20,8 +20,8 @@ BchStatus bch_encode(
     std::span<uint8_t, 52ULL> out) noexcept {
   
   BchStatus status = BchStatus::kOk;
-  const auto fid_val = fid.value();
-  const auto toi_val = toi.value();
+  const auto fid_val = fid.repair();
+  const auto toi_val = toi.repair();
 
   // ESA Safety: Force zero initial state.
   std::ranges::fill(out, 0U);
@@ -131,7 +131,7 @@ BchResult bch_decode(std::span<const uint8_t, 52ULL> in) noexcept {
   // JAXA/NASA Safety: Stack Scrubbing.
   secure_scrub(verify_buf);
 
-  return BchResult(result_status, best_fid, best_toi, min_dist);
+  return BchResult(result_status, best_fid, best_toi, static_cast<uint8_t>(min_dist));
 }
 
 uint64_t bch_codebook_checksum() noexcept {
@@ -147,6 +147,7 @@ uint64_t bch_codebook_checksum() noexcept {
   for (const auto val : kBchCodebook) {
     update_crc(val);
   }
+
   return ~(static_cast<uint64_t>(crc));
 }
 
