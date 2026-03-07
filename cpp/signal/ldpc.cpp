@@ -70,9 +70,11 @@ LdpcStatus ldpc_encode(
         const bool is_sf2 = (type == LdpcSubframe::kSF2);
         const auto Z = is_sf2 ? static_cast<uint16_t>(120U) : static_cast<uint16_t>(88U);
         const auto K = is_sf2 ? static_cast<uint16_t>(1200U) : static_cast<uint16_t>(880U);
-        const auto N_output = is_sf2 ? static_cast<uint16_t>(6000U) : static_cast<uint16_t>(4400U);
+        // Target block lengths per LSIS §2.4.3:
+        // SF2 (SB2) = 2400 symbols.
+        // SF3/4 (SB3/SB4) = 1740 symbols.
+        const auto N_output = is_sf2 ? static_cast<uint16_t>(2400U) : static_cast<uint16_t>(1740U);
         const auto filler_count = is_sf2 ? static_cast<uint8_t>(0U) : static_cast<uint8_t>(10U);
-
         if (out.size() < N_output) [[unlikely]] {
             status = LdpcStatus::kOutputTooSmall;
         } else {

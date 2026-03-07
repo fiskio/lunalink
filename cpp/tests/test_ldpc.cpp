@@ -10,9 +10,9 @@ TEST_CASE("LDPC Encoder: basic execution") {
     std::fill(msg.begin(), msg.end(), 0U);
     msg[0] = 1; // Set one bit
     
-    std::array<uint8_t, 6000> out_sf2{};
-    std::array<uint8_t, 4400> out_sf3{};
-    std::array<uint8_t, 4400> out_sf4{};
+    std::array<uint8_t, 2400> out_sf2{};
+    std::array<uint8_t, 1740> out_sf3{};
+    std::array<uint8_t, 1740> out_sf4{};
 
     SECTION("SF2 Encoding") {
         REQUIRE(ldpc_encode(LdpcSubframe::kSF2, msg, out_sf2) == LdpcStatus::kOk);
@@ -39,11 +39,11 @@ TEST_CASE("LDPC Encoder: basic execution") {
 
 TEST_CASE("LDPC Encoder: error paths") {
     std::array<uint8_t, 199> short_msg{};
-    std::array<uint8_t, 6000> out{};
+    std::array<uint8_t, 2400> out{};
     
     CHECK(ldpc_encode(LdpcSubframe::kSF2, short_msg, out) == LdpcStatus::kInvalidInput);
     
     std::array<uint8_t, 200> msg{};
-    std::span<uint8_t> short_out(out.data(), 5999);
+    std::span<uint8_t> short_out(out.data(), 2399);
     CHECK(ldpc_encode(LdpcSubframe::kSF2, msg, short_out) == LdpcStatus::kOutputTooSmall);
 }
