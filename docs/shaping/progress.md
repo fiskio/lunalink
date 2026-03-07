@@ -14,7 +14,7 @@ Update this file when a part lands on `main`.
 | Slice | Gate | Status |
 |-------|------|--------|
 | V1 | AFS-I baseband signal generated and plotted | Done |
-| V2 | Complete dual-channel AFS transmitter + architecture docs + SISICD draft | In progress |
+| V2 | Complete dual-channel AFS transmitter + architecture docs + SISICD draft | Done |
 | V3 | Full codec: encode + decode + CRC-24 + LDPC + interleaver, all 22 MSG types | Not started |
 | V4 | Validation & Interop: test vectors, BER curves, SISICD final, Spec Findings final | Not started |
 | V5 | PNT pipeline: N satellites -> composite IQ -> correlator -> position fix | Not started |
@@ -77,11 +77,11 @@ Legend: Done / PR open / In progress / Not started / Deferred
 | Deliverable | Slice | Status | Notes |
 |-------------|-------|--------|-------|
 | Signal chain block diagram | V1 | Done | docs/signal/signal_chain.rst |
-| Compliance matrix skeleton | V2 | Not started | All LSIS-nnn / TBC / TBD identifiers |
-| Architecture RST page | V2 | Not started | Module layout, C++ API surface, design decisions |
-| SISICD draft (14 TBW message types) | V2 | Not started | R7.4 |
-| Spec Findings Report draft | V2 | Not started | R7.5 — accumulate since V1 |
-| Test vector format spec | V2 | Started | docs/shaping/test-vector-format.md |
+| Compliance matrix skeleton | V2 | Done | docs/signal/compliance_matrix.rst |
+| Architecture RST page | V2 | Done | docs/signal/architecture.rst |
+| SISICD draft (14 TBW message types) | V2 | Done | docs/signal/sisicd.rst |
+| Spec Findings Report draft | V2 | Done | docs/specs-ambiguities.md |
+| Test vector format spec | V2 | Done | docs/shaping/test-vector-format.md |
 | BER curves (SF2+SF3 vs uncoded BPSK + Shannon) | V4 | Not started | R7.2 |
 | SISICD final | V4 | Not started | R7.4 |
 | Spec Findings Report final | V4 | Not started | R7.5 |
@@ -92,8 +92,8 @@ Legend: Done / PR open / In progress / Not started / Deferred
 
 ## What's next
 
-Priority order for V2 completion:
+Priority order for V3:
 
-1. ~~**C5** — BCH(51,8) encoder~~ Done
-2. ~~**C8 partial** — Frame builder (sync + SB1 + zero-padded SB2-4)~~ Done
-3. **Docs** — Compliance matrix, architecture page, SISICD draft, Spec Findings draft
+1. **C5** — BCH(51,8) decoder (correlation-based, 256 hypotheses)
+2. **C6** — LDPC encoder (5G NR sub-matrices)
+3. **C9** — Message serialiser (8 spec-defined types)
