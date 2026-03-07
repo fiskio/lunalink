@@ -2,98 +2,96 @@
 shaping: true
 ---
 
-# Progress Tracker
+# Progress Tracker — Gateway Mapping
 
 Single source of truth for what's done, what's next, and what's blocked.
-Update this file when a part lands on `main`.
+This implementation is tracked against the **8-Gateway Competition Structure**.
 
 ---
 
-## Slices
+## Gateway Mapping
 
-| Slice | Gate | Status |
-|-------|------|--------|
-| V1 | AFS-I baseband signal generated and plotted | Done |
-| V2 | Complete dual-channel AFS transmitter + architecture docs + SISICD draft | Done |
-| V3 | Full codec: encode + decode + CRC-24 + LDPC + interleaver, all 22 MSG types | Not started |
-| V4 | Validation & Interop: test vectors, BER curves, SISICD final, Spec Findings final | Not started |
-| V5 | PNT pipeline: N satellites -> composite IQ -> correlator -> position fix | Not started |
-| V6 | Demo: web app + optionally Pluto+ SDR | Deferred |
+| Gateway | Deliverable | Status | Parts Involved |
+|:---:|:---|:---:|:---|
+| **G1** | Spreading Code Generation | **Done** | C1, C3 |
+| **G2** | FEC Encoding & Decoding | **In progress** | C5, C6, C7 |
+| **G3** | Message Framing | **In progress** | C8 |
+| **G4** | Baseband Signal Generation | **Done** | C2, C4 |
+| **G5** | Frame Sync & Decoding | **Not started** | C10 (Spike done) |
+| **G6** | Message Parsing | **Not started** | C9 |
+| **G7** | Integration & Validation | **Not started** | — |
+| **G8** | Documentation | **Partial** | — |
 
 ---
 
-## Parts
+## Implementation Parts (C-Numbers)
 
 Legend: Done / PR open / In progress / Not started / Deferred
 
-### Signal chain (transmitter)
+### Gateway 1 & 4: Spreading & Signal Gen
+| Part | Description | Status | Gateway | Notes |
+|:---|:---|:---:|:---:|:---|
+| C1 | Code loader (Gold, Weil, Legendre) | Done | G1 | #2 merged |
+| C2 | BPSK modulator (AFS-I + AFS-Q) | Done | G4 | V1+V2 commit |
+| C3 | Tiered code combiner | Done | G1 | Secondary code mapping (Table 10) |
+| C4 | IQ multiplexer (5.115 MSPS) | Done | G4 | Chunked generation |
 
-| Part | Description | Slice | Status | PR / Notes |
-|------|-------------|-------|--------|------------|
-| C1 | Code loader (Gold-2046, Weil-10230, Weil-1500) | V1+V2 | Done | #2 merged |
-| C2 | BPSK modulator — AFS-I BPSK(1) | V1 | Done | V1 commit |
-| C2 | BPSK modulator — AFS-Q BPSK(5) | V2 | Done | C2-Q+C4 PR |
-| C3 | Tiered code combiner | V2 | Done | includes TieredCodeAssignment + explicit assignment API |
-| C4 | IQ multiplexer (50/50 power, 5.115 MSPS) | V2 | Done | C2-Q+C4 PR |
+### Gateway 2: Forward Error Correction
+| Part | Description | Status | Gateway | Notes |
+|:---|:---|:---:|:---:|:---|
+| C5 | BCH(51,8) Encoder | Done | G2 | Polynomial 763₈ (Figure 8 verified) |
+| C5 | BCH(51,8) Decoder | In progress | G2 | Correlation-based (256 hypotheses) |
+| C6 | LDPC Encoder (5G NR SF2/3/4) | Not started | G2 | Spike-C7 closed |
+| C7 | LDPC Decoder (Min-Sum BP) | Not started | G2 | Spike-C7 closed |
+| — | Block Interleaver/Deinterleaver | Not started | G2 | 60x98 matrix |
+| — | CRC-24 Generator/Validator | Not started | G2 | G(X)=(1+X)·P(X) |
 
-### Navigation message (TX)
+### Gateway 3: Message Framing
+| Part | Description | Status | Gateway | Notes |
+|:---|:---|:---:|:---:|:---|
+| C8 | Frame Builder (TX) | Partial | G3 | Sync + BCH SB1 done |
+| — | Subframe 2/3/4 Builders | Not started | G3 | LDPC + Interleaver required |
+| — | Frame Assembler | Not started | G3 | 12s frame concatenation |
 
-| Part | Description | Slice | Status | PR / Notes |
-|------|-------------|-------|--------|------------|
-| C5 | BCH(51,8) encoder | V2 | Done | Fibonacci LFSR, poly 1+X³+X⁴+X⁵+X⁶+X⁷+X⁸ (spec text says 763₈ but Figure 7 polynomial verified against Figure 8 test vector) |
-| C8 | Frame builder (partial: sync + BCH SB1 + zero-padded SB2-4) | V2 | Done | 68-symbol sync + 52-symbol BCH + zero-pad; 19 Catch2 tests; pybind11 bound |
+### Gateway 5 & 6: RX Pipeline
+| Part | Description | Status | Gateway | Notes |
+|:---|:---|:---:|:---:|:---|
+| C10 | Software Correlator | Not started | G5 | Spike-C10 closed |
+| — | Sync Pattern Detector | Not started | G5 | Cross-correlation |
+| C9 | Message Parsers (all 22 types) | Not started | G6 | 8 spec-defined + 14 SISICD |
+| — | ToT Calculator | Not started | G6 | LSIS-720 formula |
 
-### Navigation message (full codec)
-
-| Part | Description | Slice | Status | PR / Notes |
-|------|-------------|-------|--------|------------|
-| C5 | BCH(51,8) decoder (correlation-based, 256 hypotheses) | V3 | Not started | |
-| C6 | LDPC encoder (5G NR, SF2+SF3+SF4) | V3 | Not started | Spike closed (spike-C7.md) |
-| C7 | LDPC decoder (min-sum BP, 50 iter, static buffers) | V3 | Not started | Spike closed (spike-C7.md) |
-| C8 | Frame builder/parser complete (TX+RX, interleaver, CRC-24) | V3 | Not started | |
-| C9 | Message serialiser (all 22 MSG types) | V3 | Not started | 8 spec-defined + 14 TBW |
-
-### Receiver
-
-| Part | Description | Slice | Status | PR / Notes |
-|------|-------------|-------|--------|------------|
-| C10 | Software correlator (PCPS acquisition + DLL/PLL tracking) | V5 | Not started | Spike closed (spike-C10.md) |
-| C11 | PNT solver (Eigen, weighted least-squares) | V5 | Not started | |
-| C13 | Keplerian propagator | V5 | Not started | |
-
-### Infrastructure
-
-| Part | Description | Slice | Status | PR / Notes |
-|------|-------------|-------|--------|------------|
-| C12 | GNURadio OOT module + Pluto+ SDR | V6 | Deferred | spike-C12.md open |
-| C14 | pybind11 bindings | V1+ | Partial | C1+C2+C3+C4 bound; grows with each part |
-| C15 | Web backend (FastAPI) | V6 | Deferred | |
-| C16 | Web frontend (Three.js) | V6 | Deferred | |
+### Gateway 7: Integration, Performance & Utilities
+| Part | Description | Status | Gateway | Notes |
+|:---|:---|:---:|:---:|:---|
+| C11 | PNT Solver (pseudoranges -> fix) | Not started | G7 | Eigen-based |
+| — | SISE Calculation (Pos/Vel Error) | Not started | G7 | 95th percentile analysis |
+| — | Link Budget Analysis | Not started | G7 | -160 dBW sensitivity |
+| — | Final Compliance Report | Not started | G7 | Gateway 1-8 evidence |
 
 ---
 
-## Documentation deliverables
+## Documentation & Submission Deliverables
 
-| Deliverable | Slice | Status | Notes |
-|-------------|-------|--------|-------|
-| Signal chain block diagram | V1 | Done | docs/signal/signal_chain.rst |
-| Compliance matrix skeleton | V2 | Done | docs/signal/compliance_matrix.rst |
-| Architecture RST page | V2 | Done | docs/signal/architecture.rst |
-| SISICD draft (14 TBW message types) | V2 | Done | docs/signal/sisicd.rst |
-| Spec Findings Report draft | V2 | Done | docs/specs-ambiguities.md |
-| Test vector format spec | V2 | Done | docs/shaping/test-vector-format.md |
-| BER curves (SF2+SF3 vs uncoded BPSK + Shannon) | V4 | Not started | R7.2 |
-| SISICD final | V4 | Not started | R7.4 |
-| Spec Findings Report final | V4 | Not started | R7.5 |
-| Link budget analysis | V4 | Not started | R7.7 |
-| Quality report (coverage, tidy, sanitizer) | V4 | Not started | |
+| Deliverable | Gateway | Status | Notes |
+|:---|:---:|:---:|:---|
+| Signal chain block diagram | G8 | Done | docs/signal/signal_chain.rst |
+| Compliance Matrix (G1-G8) | G8 | Partial | docs/signal/compliance_matrix.rst |
+| Architecture Description | G8 | Done | docs/signal/architecture.rst |
+| SISICD (TBW field layouts) | G8 | Done | docs/signal/sisicd.rst |
+| Spec Findings Report | G8 | Partial | docs/signal/spec_findings_report.rst |
+| Test Vector Suite (codes, frames, signals) | G7 | Partial | Standardized binary format |
+| **Interoperability Test Report** | G7 | Not started | Official 7-section template |
+| **Performance Report** | G7 | Not started | Throughput/Latency analysis |
+| **Compliance Checklist** | G7 | Not started | Final success metric audit |
+| BER Performance Curves | G7 | Not started | Eb/N0 sweeps for SF2/3 |
+| API Usage Examples (Notebooks) | G8 | Not started | G8 success criteria |
 
 ---
 
-## What's next
+## What's Next (Phase 2 Priority)
 
-Priority order for V3:
-
-1. **C5** — BCH(51,8) decoder (correlation-based, 256 hypotheses)
-2. **C6** — LDPC encoder (5G NR sub-matrices)
-3. **C9** — Message serialiser (8 spec-defined types)
+1.  **G2 Core:** Implement the **Block Interleaver** and **CRC-24** (prerequisites for full framing).
+2.  **G2 Decoder:** Implement the **BCH(51,8) correlation-based decoder**.
+3.  **G2 LDPC:** Implement the **LDPC table pipeline** (`scripts/gen_ldpc_tables.py`) and **Encoder** (C6).
+4.  **G3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.
