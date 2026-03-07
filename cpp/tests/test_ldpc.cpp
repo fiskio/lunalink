@@ -47,3 +47,32 @@ TEST_CASE("LDPC Encoder: error paths") {
     std::span<uint8_t> short_out(out.data(), 2399);
     CHECK(ldpc_encode(LdpcSubframe::kSF2, msg, short_out) == LdpcStatus::kOutputTooSmall);
 }
+
+TEST_CASE("LDPC: Table integrity and failure paths") {
+    CHECK(kLdpc_sf2_a.verify_integrity());
+    CHECK(kLdpc_sf2_b_inv.verify_integrity());
+    CHECK(kLdpc_sf2_c.verify_integrity());
+    CHECK(kLdpc_sf2_d.verify_integrity());
+    CHECK(kLdpc_sf3_a.verify_integrity());
+    CHECK(kLdpc_sf3_b_inv.verify_integrity());
+    CHECK(kLdpc_sf3_c.verify_integrity());
+    CHECK(kLdpc_sf3_d.verify_integrity());
+
+    SECTION("Integrity failure detection") {
+        LdpcCsrMatrix tampered = kLdpc_sf2_a;
+        tampered.num_entries += 1; // Tamper
+        CHECK_FALSE(tampered.verify_integrity());
+    }
+}
+
+TEST_CASE("LDPC: Subframe types coverage") {
+    std::array<uint8_t, 200> msg{};
+    std::array<uint8_t, 2400> out{};
+    
+    // SF2
+    CHECK(ldpc_encode(LdpcSubframe::kSF2, msg, out) == LdpcStatus::kOk);
+    // SF3
+    CHECK(ldpc_encode(LdpcSubframe::kSF3, msg, out) == LdpcStatus::kOk);
+    // SF4
+    CHECK(ldpc_encode(LdpcSubframe::kSF4, msg, out) == LdpcStatus::kOk);
+}

@@ -16,18 +16,16 @@ struct LdpcCsrMatrix {
     uint32_t                  crc32;
 
     /**
-     * @brief Perform a Just-In-Time integrity check of the matrix structure. [CBIT-AFS-LDPC]
+     * @brief Perform a JIT integrity check of matrix structure using CRC32. [CBIT-AFS-LDPC]
      */
     [[nodiscard]] bool verify_integrity() const noexcept;
 };
 
 extern const LdpcCsrMatrix kLdpc_sf2_a;
-extern const LdpcCsrMatrix kLdpc_sf2_b;
 extern const LdpcCsrMatrix kLdpc_sf2_b_inv;
 extern const LdpcCsrMatrix kLdpc_sf2_c;
 extern const LdpcCsrMatrix kLdpc_sf2_d;
 extern const LdpcCsrMatrix kLdpc_sf3_a;
-extern const LdpcCsrMatrix kLdpc_sf3_b;
 extern const LdpcCsrMatrix kLdpc_sf3_b_inv;
 extern const LdpcCsrMatrix kLdpc_sf3_c;
 extern const LdpcCsrMatrix kLdpc_sf3_d;

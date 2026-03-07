@@ -2,12 +2,11 @@
 """Generate flight-hardened LDPC sub-matrix tables for LSIS-AFS.
 
 Converts CSV indices into CSR (Compressed Sparse Row) C++ structures.
-Includes Row-Parity and Matrix-CRC32 for Mission Assurance (CBIT).
+Includes Matrix-CRC32 for Mission Assurance (CBIT).
 """
 
 import binascii
 import csv
-import struct
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -17,18 +16,11 @@ OUT_CPP = REPO_ROOT / "cpp" / "signal" / "ldpc_tables.cpp"
 
 # Matrix Definitions from LSIS-AFS Annex 2
 MATRICES = [
-    # SF2 (Z=120, K=1200)
     {
         "id": "sf2_a",
         "file": "003a_lunanet_sf2_ldpc_submatrix_a_ind.csv",
         "rows": 480,
         "cols": 1200,
-    },
-    {
-        "id": "sf2_b",
-        "file": "003b_lunanet_sf2_ldpc_submatrix_b_ind.csv",
-        "rows": 480,
-        "cols": 480,
     },
     {
         "id": "sf2_b_inv",
@@ -48,18 +40,11 @@ MATRICES = [
         "rows": 4560,
         "cols": 480,
     },
-    # SF3 (Z=88, K=880)
     {
         "id": "sf3_a",
         "file": "003f_lunanet_sf3_ldpc_submatrix_a_ind.csv",
         "rows": 352,
         "cols": 880,
-    },
-    {
-        "id": "sf3_b",
-        "file": "003g_lunanet_sf3_ldpc_submatrix_b_ind.csv",
-        "rows": 352,
-        "cols": 352,
     },
     {
         "id": "sf3_b_inv",
@@ -82,17 +67,36 @@ MATRICES = [
 ]
 
 
-def crc32_data(data_list):
-    """Calculate CRC32 for a list of integers."""
-    b = bytearray()
-    for x in data_list:
-        b.extend(struct.pack("<H", x))
-    return binascii.crc32(b) & 0xFFFFFFFF
+def calculate_matrix_crc(res, m_def):
+    """Calculate a stable CRC32 for the CSR structure including metadata."""
+    data = bytearray()
+    # 1. num_entries (u32 LE)
+    data.extend(res["num_entries"].to_bytes(4, "little"))
+    # 2. num_rows (u16 LE)
+    data.extend(m_def["rows"].to_bytes(2, "little"))
+    # 3. num_cols (u16 LE)
+    data.extend(m_def["cols"].to_bytes(2, "little"))
+    # 4. col_indices (u16 LE per element)
+    for val in res["col_indices"]:
+        data.extend(val.to_bytes(2, "little"))
+    # 5. row_ptr (u16 LE per element)
+    for val in res["row_ptr"]:
+        data.extend(val.to_bytes(2, "little"))
+    return binascii.crc32(data) & 0xFFFFFFFF
 
 
 def parse_matrix(m_def):
-    """Parse a single LDPC sub-matrix from CSV and convert to CSR format."""
+    """Parse matrix and convert to CSR."""
     path = REF_DIR / m_def["file"]
+    if not path.exists():
+        alt_path = REF_DIR / m_def["file"].replace("lunalink", "lunanet")
+        if alt_path.exists():
+            path = alt_path
+        else:
+            alt_path = REF_DIR / m_def["file"].replace("lunanet", "lunalink")
+            if alt_path.exists():
+                path = alt_path
+
     edges = []
     with open(path) as f:
         reader = csv.reader(f)
@@ -102,13 +106,10 @@ def parse_matrix(m_def):
             r, c = map(int, row)
             edges.append((r, c))
 
-    # Sort for CSR: row primary, then column
     edges.sort()
-
     num_rows = m_def["rows"]
     col_indices = [e[1] for e in edges]
     row_ptr = [0] * (num_rows + 1)
-
     curr_edge = 0
     for r in range(num_rows):
         row_ptr[r] = curr_edge
@@ -116,64 +117,45 @@ def parse_matrix(m_def):
             curr_edge += 1
     row_ptr[num_rows] = curr_edge
 
-    return {
+    res = {
         "col_indices": col_indices,
         "row_ptr": row_ptr,
-        "num_entries": len(edges),
-        "crc": crc32_data(col_indices + row_ptr),
+        "num_entries": len(col_indices),
     }
+    res["crc"] = calculate_matrix_crc(res, m_def)
+    return res
 
 
 def main():
-    """Process all matrices and generate C++ code."""
-    print("LunaLink LDPC Table Generator - Mission Assurance Mode")
-
+    """Generate all CSR tables with Mission Assurance hardening."""
     results = {}
-    total_bytes = 0
-
     for m in MATRICES:
-        print(f"  Processing {m['id']}...")
         results[m["id"]] = parse_matrix(m)
-        # uint16_t for both
-        m_bytes = (
-            len(results[m["id"]]["col_indices"]) + len(results[m["id"]]["row_ptr"])
-        ) * 2
-        total_bytes += m_bytes
-
-    print("\nResource Audit:")
-    print(f"  Total ROM Footprint: {total_bytes / 1024:.2f} KB")
-    if total_bytes > 128 * 1024:
-        print("  WARNING: Memory budget exceeded (128KB)!")
-    else:
-        print("  Memory budget: OK")
 
     # Generate HPP
     with open(OUT_HPP, "w") as f:
         f.write(
-            """#pragma once
-#include <cstdint>
-#include <span>
-
-namespace lunalink::signal {
-
-/**
- * @brief CSR (Compressed Sparse Row) representation of LDPC sub-matrices.
- */
-struct LdpcCsrMatrix {
-    std::span<const uint16_t> col_indices;
-    std::span<const uint16_t> row_ptr;
-    uint32_t                  num_entries;
-    uint16_t                  num_rows;
-    uint16_t                  num_cols;
-    uint32_t                  crc32;
-
-    /**
-     * @brief Perform a JIT integrity check of matrix structure. [CBIT-AFS-LDPC]
-     */
-    [[nodiscard]] bool verify_integrity() const noexcept;
-};
-
-"""
+            "#pragma once\n"
+            "#include <cstdint>\n"
+            "#include <span>\n\n"
+            "namespace lunalink::signal {\n\n"
+            "/**\n"
+            " * @brief CSR (Compressed Sparse Row) representation of LDPC "
+            "sub-matrices.\n"
+            " */\n"
+            "struct LdpcCsrMatrix {\n"
+            "    std::span<const uint16_t> col_indices;\n"
+            "    std::span<const uint16_t> row_ptr;\n"
+            "    uint32_t                  num_entries;\n"
+            "    uint16_t                  num_rows;\n"
+            "    uint16_t                  num_cols;\n"
+            "    uint32_t                  crc32;\n\n"
+            "    /**\n"
+            "     * @brief Perform a JIT integrity check of matrix structure "
+            "using CRC32. [CBIT-AFS-LDPC]\n"
+            "     */\n"
+            "    [[nodiscard]] bool verify_integrity() const noexcept;\n"
+            "};\n\n"
         )
         for m in MATRICES:
             f.write(f"extern const LdpcCsrMatrix kLdpc_{m['id']};\n")
@@ -182,28 +164,47 @@ struct LdpcCsrMatrix {
     # Generate CPP
     with open(OUT_CPP, "w") as f:
         f.write('#include "lunalink/signal/ldpc_tables.hpp"\n')
-        f.write("#include <algorithm>\n")
-        f.write("#include <numeric>\n\n")
+        f.write('#include "lunalink/signal/safety.hpp"\n\n')
         f.write("namespace lunalink::signal {\n\n")
 
+        # Flight-Hardened JIT integrity check implementation
         f.write("bool LdpcCsrMatrix::verify_integrity() const noexcept {\n")
-        f.write("    uint32_t current_crc = 0;\n")
-        f.write("    for (const uint16_t val : col_indices) {\n")
-        f.write("        (void)val; // Suppress unused warning\n")
+        f.write("    uint32_t crc = 0xFFFFFFFFU;\n")
+        f.write("    auto update_u32 = [&](uint32_t val) {\n")
+        f.write("        for (uint32_t i = 0; i < 4U; i++) {\n")
         f.write(
-            "        current_crc = (current_crc ^ 0xFFFFFFFFU); // Simple mock CRC\n"
+            "            crc ^= static_cast<uint8_t>("
+            "(static_cast<uint32_t>(val) >> (i * 8U)) & 0xFFU);\n"
         )
-        f.write("    }\n")
-        f.write("    // Integrity gate verified.\n")
-        f.write("    return (current_crc != 0x12345678U);\n")
+        f.write("            for (uint32_t j = 0; j < 8U; j++) {\n")
+        f.write("                crc = (crc >> 1U) ^ (0xEDB88320U & (-(crc & 1U)));\n")
+        f.write("            }\n")
+        f.write("        }\n")
+        f.write("    };\n")
+        f.write("    auto update_u16 = [&](uint16_t val) {\n")
+        f.write("        for (uint32_t i = 0; i < 2U; i++) {\n")
+        f.write(
+            "            crc ^= static_cast<uint8_t>("
+            "(static_cast<uint32_t>(val) >> (i * 8U)) & 0xFFU);\n"
+        )
+        f.write("            for (uint32_t j = 0; j < 8U; j++) {\n")
+        f.write("                crc = (crc >> 1U) ^ (0xEDB88320U & (-(crc & 1U)));\n")
+        f.write("            }\n")
+        f.write("        }\n")
+        f.write("    };\n")
+        f.write("    update_u32(num_entries);\n")
+        f.write("    update_u16(num_rows);\n")
+        f.write("    update_u16(num_cols);\n")
+        f.write("    for (uint16_t val : col_indices) { update_u16(val); }\n")
+        f.write("    for (uint16_t val : row_ptr) { update_u16(val); }\n")
+        f.write("    return (crc ^ 0xFFFFFFFFU) == crc32;\n")
         f.write("}\n\n")
 
         for m in MATRICES:
             res = results[m["id"]]
             f.write(f"// --- {m['id']} ---\n")
-            # Class A: Cache-line alignment for deterministic fetch latency.
-            f.write("alignas(64) ")
             f.write(
+                "alignas(64) LUNALINK_LUT_SECTION "
                 "// NOLINTNEXTLINE(hicpp-avoid-c-arrays, "
                 "cppcoreguidelines-avoid-c-arrays)\n"
             )
@@ -211,8 +212,8 @@ struct LdpcCsrMatrix {
             f.write(", ".join(map(str, res["col_indices"])))
             f.write("};\n")
 
-            f.write("alignas(64) ")
             f.write(
+                "alignas(64) LUNALINK_LUT_SECTION "
                 "// NOLINTNEXTLINE(hicpp-avoid-c-arrays, "
                 "cppcoreguidelines-avoid-c-arrays)\n"
             )
@@ -221,22 +222,21 @@ struct LdpcCsrMatrix {
             f.write("};\n")
 
             f.write(f"const LdpcCsrMatrix kLdpc_{m['id']} = {{\n")
-            # Suppress decay warning
             f.write(
-                "    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array"
-                "-to-pointer-decay, hicpp-no-array-decay)\n"
+                "    // NOLINTNEXTLINE("
+                "cppcoreguidelines-pro-bounds-array-to-pointer-decay, "
+                "hicpp-no-array-decay)\n"
             )
             f.write(
                 f"    std::span(k{m['id']}_cols), "
-                f"std::span(k{m['id']}_ptr), "
-                f"{res['num_entries']},\n"
-                f"    {m['rows']}, {m['cols']}, 0x{res['crc']:08X}U\n"
+                f"std::span(k{m['id']}_ptr), {res['num_entries']},\n"
             )
+            f.write(f"    {m['rows']}, {m['cols']}, 0x{res['crc']:08X}U\n")
             f.write("};\n\n")
 
         f.write("} // namespace lunalink::signal\n")
 
-    print(f"\nTables generated successfully: {OUT_CPP.name}")
+    print(f"Generated {OUT_CPP.name} with Mission Assurance hardening.")
 
 
 if __name__ == "__main__":

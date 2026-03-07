@@ -1,179 +1,204 @@
 #include "lunalink/signal/ldpc.hpp"
+
 #include <algorithm>
 #include <array>
-#include <numeric>
 #include <cassert>
+#include <numeric>
 
 namespace lunalink::signal {
 
 namespace {
 
 /**
- * @brief Hardened Sparse Matrix-Vector Multiplier (GF2). [LSIS-AFS-320]
- * 
- * Extreme Hardening Patterns:
- * 1. Accumulator Mirroring: Detects ALU bit-flips in XOR cascade.
- * 2. Loop Counter Mirroring: Detects SEU-induced PC jumps or early exits.
- * 3. Terminal CFI Sentinel: Verifies total operations count.
+ * @brief CFI Magic Patterns (High-entropy to detect multi-bit radiation jumps).
  */
-template <typename T_out>
-void multiply_sparse_hardened(
-    const LdpcCsrMatrix& m,
-    std::span<const uint8_t> vec,
-    std::span<T_out> out,
-    uint32_t& sentinel_out) noexcept {
-    
-    uint32_t ops_count = 0;
-    uint32_t ops_count_mir = 0xFFFFFFFFU;
-
-    for (uint16_t r = 0; r < m.num_rows; ++r) {
-        uint8_t acc = 0;
-        uint8_t acc_mir = 0xFFU;
-        
-        const uint32_t start = m.row_ptr[r];
-        const uint32_t end = m.row_ptr[r + 1];
-        
-        for (uint32_t i = start; i < end; ++i) {
-            // Extreme CFI: Mirror the loop counter
-            static_cast<void>(i); // Placeholder if needed
-            
-            const uint16_t col = m.col_indices[i];
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-            const uint8_t val = vec[col];
-            
-            acc ^= val;
-            acc_mir ^= val;
-            ops_count++;
-            ops_count_mir--;
-        }
-        
-        // Per-Row ALU/Register Integrity Check
-        if (acc != static_cast<uint8_t>(~acc_mir)) [[unlikely]] {
-            sentinel_out = 0U; 
-            return;
-        }
-        
-        out[r] = static_cast<T_out>(acc & 1U);
-    }
-    
-    // Final CFI check: Verify terminal count and mirror
-    if (ops_count != static_cast<uint32_t>(~ops_count_mir)) [[unlikely]] {
-        sentinel_out = 0U;
-    } else {
-        sentinel_out = ops_count;
-    }
-}
-
-} // namespace
+constexpr uint32_t kCfiMagicStart = 0xA5A5A5A5U;
+constexpr uint32_t kCfiMagicEnd = 0x5A5A5A5AU;
 
 /**
- * @brief Encode a navigation sub-block using LSIS-AFS LDPC. [LSIS-AFS-320]
+ * @brief Sparse Matrix-Vector Multiplication (Hardened CSR). [LSIS-AFS-320]
+ * Includes Mirror Variables and CFI to detect radiation-induced logic skips.
  */
-LdpcStatus ldpc_encode(
-    LdpcSubframe               type,
-    std::span<const uint8_t>   msg,
-    std::span<uint8_t>         out) noexcept {
-    
-    LdpcStatus status = LdpcStatus::kOk;
+template <typename T_out>
+[[nodiscard]] bool multiply_sparse_hardened(const LdpcCsrMatrix& m,
+                                           std::span<const uint8_t> vec,
+                                           std::span<T_out> out) noexcept {
+  uint32_t ops_count = kCfiMagicStart;
+  uint32_t ops_count_mir = ~kCfiMagicStart;
+  bool success = true;
 
-    if (msg.size() != 200) [[unlikely]] {
-        status = LdpcStatus::kInvalidInput;
-    } else {
-        const bool is_sf2 = (type == LdpcSubframe::kSF2);
-        const auto Z = is_sf2 ? static_cast<uint16_t>(120U) : static_cast<uint16_t>(88U);
-        const auto K = is_sf2 ? static_cast<uint16_t>(1200U) : static_cast<uint16_t>(880U);
-        const auto N_output = is_sf2 ? static_cast<uint16_t>(2400U) : static_cast<uint16_t>(1740U);
-        const auto filler_count = is_sf2 ? static_cast<uint8_t>(0U) : static_cast<uint8_t>(10U);
+  for (uint16_t r = 0; r < m.num_rows; ++r) {
+    uint8_t acc = 0;
+    uint8_t acc_mir = 0xFFU;
 
-        if (out.size() < N_output) [[unlikely]] {
-            status = LdpcStatus::kOutputTooSmall;
-        } else {
-            // 1. Matrix Selection and JIT Integrity Gate [CBIT-AFS-LDPC]
-            const LdpcCsrMatrix &mA = is_sf2 ? kLdpc_sf2_a : kLdpc_sf3_a;
-            const LdpcCsrMatrix &mBinv = is_sf2 ? kLdpc_sf2_b_inv : kLdpc_sf3_b_inv;
-            const LdpcCsrMatrix &mC = is_sf2 ? kLdpc_sf2_c : kLdpc_sf3_c;
-            const LdpcCsrMatrix &mD = is_sf2 ? kLdpc_sf2_d : kLdpc_sf3_d;
+    const uint32_t start = m.row_ptr[r];
+    const uint32_t end = m.row_ptr[r + 1];
 
-            if (!mA.verify_integrity() || !mBinv.verify_integrity() || 
-                !mC.verify_integrity() || !mD.verify_integrity()) [[unlikely]] {
-                return LdpcStatus::kFaultDetected;
-            }
+    for (uint32_t i = start; i < end; ++i) {
+      const uint16_t col = m.col_indices[i];
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+      const uint8_t val = vec[col];
 
-            // ESA Safety: Scrub local stack buffers.
-            std::array<uint8_t, 1200> s{}; // Systematic (padded)
-            std::array<uint8_t, 480>  p1{}; // Intermediate parity
-            std::array<uint8_t, 4560> p2{}; // Final parity
-            
-            // Prepare systematic vector 's' [LSIS-320]
-            for (std::size_t i = 0; i < 200; ++i) {
-                s.at(i) = msg[i];
-            }
-            if (filler_count > 0) {
-                for (std::size_t i = 200; i < 200U + filler_count; ++i) {
-                    s.at(i) = 0U;
-                }
-            }
-            for (std::size_t i = 200U + filler_count; i < K; ++i) {
-                s.at(i) = 0U;
-            }
-
-            // 3. Stage 1: p1 = B^-1 * (A * s) [LSIS-320]
-            uint32_t sentinel_a = 0;
-            uint32_t sentinel_binv = 0;
-            std::array<uint8_t, 480> temp_as{};
-            
-            multiply_sparse_hardened(mA, std::span(s).subspan(0, K), std::span(temp_as).subspan(0, mA.num_rows), sentinel_a);
-            multiply_sparse_hardened(mBinv, std::span(temp_as).subspan(0, mA.num_rows), std::span(p1).subspan(0, mBinv.num_rows), sentinel_binv);
-
-            if (sentinel_a != mA.num_entries || sentinel_binv != mBinv.num_entries) [[unlikely]] {
-                status = LdpcStatus::kFaultDetected;
-            } else {
-                // 4. Stage 2: p2 = C*s + D*p1 [LSIS-320]
-                uint32_t sentinel_c = 0;
-                uint32_t sentinel_d = 0;
-                std::array<uint8_t, 4560> temp_cs{};
-                std::array<uint8_t, 4560> temp_dp1{};
-
-                multiply_sparse_hardened(mC, std::span(s).subspan(0, K), std::span(temp_cs).subspan(0, mC.num_rows), sentinel_c);
-                multiply_sparse_hardened(mD, std::span(p1).subspan(0, mD.num_cols), std::span(temp_dp1).subspan(0, mD.num_rows), sentinel_d);
-
-                if (sentinel_c != mC.num_entries || sentinel_d != mD.num_entries) [[unlikely]] {
-                    status = LdpcStatus::kFaultDetected;
-                } else {
-                    for (uint16_t i = 0; i < mC.num_rows; ++i) {
-                        p2.at(i) = static_cast<uint8_t>(temp_cs.at(i) ^ temp_dp1.at(i));
-                    }
-
-                    // 5. Assembly and Puncturing [LSIS-320]
-                    const auto puncture_start = static_cast<std::size_t>(2U * Z);
-                    std::size_t out_idx = 0;
-
-                    for (std::size_t i = puncture_start; i < K; ++i) {
-                        out[out_idx++] = s.at(i);
-                    }
-                    for (std::size_t i = 0; i < mA.num_rows; ++i) {
-                        out[out_idx++] = p1.at(i);
-                    }
-                    for (std::size_t i = 0; i < mC.num_rows; ++i) {
-                        if (out_idx < N_output) {
-                            out[out_idx++] = p2.at(i);
-                        }
-                    }
-                }
-                
-                // JAXA Safety: Stack Scrubbing.
-                std::fill(temp_cs.begin(), temp_cs.end(), 0U);
-                std::fill(temp_dp1.begin(), temp_dp1.end(), 0U);
-            }
-            
-            std::fill(s.begin(), s.end(), 0U);
-            std::fill(p1.begin(), p1.end(), 0U);
-            std::fill(p2.begin(), p2.end(), 0U);
-            std::fill(temp_as.begin(), temp_as.end(), 0U);
-        }
+      acc ^= val;
+      acc_mir ^= val;
+      ops_count++;
+      ops_count_mir--;
+      wip_tick();
     }
 
-    return status;
+    if (acc != static_cast<uint8_t>(~acc_mir)) [[unlikely]] {
+      success = false;
+    }
+    out[r] = static_cast<T_out>(acc & 1U);
+    wip_tick();
+  }
+
+  const uint32_t total_ops = ops_count - kCfiMagicStart;
+  return success && (total_ops == m.num_entries) &&
+         (ops_count == static_cast<uint32_t>(~ops_count_mir)) &&
+         (kCfiMagicEnd != 0);
 }
 
-} // namespace lunalink::signal
+/**
+ * @brief Input Bit-Validation Gate. [NASA-FSW-SAFETY]
+ */
+[[nodiscard]] bool validate_bits(std::span<const uint8_t> bits) noexcept {
+  uint8_t fault_mask = 0;
+  for (const uint8_t b : bits) {
+    fault_mask |= (b & 0xFEU);
+  }
+  return (fault_mask == 0);
+}
+
+/**
+ * @brief Assemble the final punctured codeword. [LSIS-AFS-320]
+ * Hardened with CFI to ensure correct symbol count.
+ */
+[[nodiscard]] bool assemble_codeword_hardened(const uint16_t Z, const uint16_t K,
+                                              const uint16_t N_output,
+                                              std::span<const uint8_t> s,
+                                              std::span<const uint8_t> p1,
+                                              std::span<const uint8_t> p2,
+                                              std::span<uint8_t> out) noexcept {
+  const auto puncture_start = static_cast<std::size_t>(2U * Z);
+  std::size_t out_idx = 0;
+  uint32_t cfi_count = kCfiMagicStart;
+
+  for (std::size_t i = puncture_start; i < K; ++i) {
+    out[out_idx++] = s[i];
+    cfi_count++;
+    wip_tick();
+  }
+  for (const uint8_t p : p1) {
+    out[out_idx++] = p;
+    cfi_count++;
+    wip_tick();
+  }
+  for (const uint8_t p : p2) {
+    if (out_idx < N_output) {
+      out[out_idx++] = p;
+      cfi_count++;
+      wip_tick();
+    }
+  }
+
+  return (out_idx == N_output) && (cfi_count == (kCfiMagicStart + N_output));
+}
+
+}  // namespace
+
+LdpcStatus ldpc_encode(LdpcSubframe type, std::span<const uint8_t> msg,
+                        std::span<uint8_t> out) noexcept {
+  LdpcStatus status = LdpcStatus::kOk;
+
+  if (msg.size() != 200 || !validate_bits(msg)) [[unlikely]] {
+    status = LdpcStatus::kInvalidInput;
+  } else {
+    const bool is_sf2 = (type == LdpcSubframe::kSF2);
+    const auto Z =
+        is_sf2 ? static_cast<uint16_t>(120U) : static_cast<uint16_t>(88U);
+    const auto K =
+        is_sf2 ? static_cast<uint16_t>(1200U) : static_cast<uint16_t>(880U);
+    const auto N_output =
+        is_sf2 ? static_cast<uint16_t>(2400U) : static_cast<uint16_t>(1740U);
+    const auto filler_count =
+        is_sf2 ? static_cast<uint8_t>(0U) : static_cast<uint8_t>(10U);
+
+    if (out.size() < N_output) [[unlikely]] {
+      status = LdpcStatus::kOutputTooSmall;
+    } else {
+      const LdpcCsrMatrix& mA = is_sf2 ? kLdpc_sf2_a : kLdpc_sf3_a;
+      const LdpcCsrMatrix& mBinv = is_sf2 ? kLdpc_sf2_b_inv : kLdpc_sf3_b_inv;
+      const LdpcCsrMatrix& mC = is_sf2 ? kLdpc_sf2_c : kLdpc_sf3_c;
+      const LdpcCsrMatrix& mD = is_sf2 ? kLdpc_sf2_d : kLdpc_sf3_d;
+
+      if (!mA.verify_integrity() || !mBinv.verify_integrity() ||
+          !mC.verify_integrity() || !mD.verify_integrity()) [[unlikely]] {
+        status = LdpcStatus::kFaultDetected;
+      } else {
+        std::array<uint8_t, 1200> s{};
+        std::array<uint8_t, 480> p1{};
+        std::array<uint8_t, 4560> p2{};
+
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+        for (std::size_t i = 0; i < 200; ++i) {
+          s[i] = msg[i];
+        }
+        if (filler_count > 0) {
+          for (std::size_t i = 200; i < 200U + filler_count; ++i) {
+            s[i] = 0U;
+          }
+        }
+        for (std::size_t i = 200U + filler_count; i < K; ++i) {
+          s[i] = 0U;
+        }
+        // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+
+        std::array<uint8_t, 480> temp_as{};
+        if (!multiply_sparse_hardened(mA, std::span(s).subspan(0, K),
+                                      std::span(temp_as).subspan(0,
+                                                                 mA.num_rows)) ||
+            !multiply_sparse_hardened(
+                mBinv, std::span(temp_as).subspan(0, mA.num_rows),
+                std::span(p1).subspan(0, mBinv.num_rows))) {
+          status = LdpcStatus::kFaultDetected;
+        } else {
+          std::array<uint8_t, 4560> temp_cs{};
+          std::array<uint8_t, 4560> temp_dp1{};
+
+          if (!multiply_sparse_hardened(mC, std::span(s).subspan(0, K),
+                                        std::span(temp_cs).subspan(0,
+                                                                   mC.num_rows)) ||
+              !multiply_sparse_hardened(
+                  mD, std::span(p1).subspan(0, mD.num_cols),
+                  std::span(temp_dp1).subspan(0, mD.num_rows))) {
+            status = LdpcStatus::kFaultDetected;
+          } else {
+            // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+            for (uint16_t i = 0; i < mC.num_rows; ++i) {
+              p2[i] = static_cast<uint8_t>(temp_cs[i] ^ temp_dp1[i]);
+            }
+            // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+            if (!assemble_codeword_hardened(
+                    Z, K, N_output, s, std::span(p1).subspan(0, mBinv.num_rows),
+                    std::span(p2).subspan(0, mC.num_rows), out)) {
+              status = LdpcStatus::kFaultDetected;
+            }
+          }
+          secure_scrub(temp_cs);
+          secure_scrub(temp_dp1);
+        }
+
+        secure_scrub(s);
+        secure_scrub(p1);
+        secure_scrub(p2);
+        secure_scrub(temp_as);
+      }
+    }
+  }
+
+  return (status == LdpcStatus::kOk && kCfiMagicEnd != 0) ? LdpcStatus::kOk
+                                                         : status;
+}
+
+}  // namespace lunalink::signal

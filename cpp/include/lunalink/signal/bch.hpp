@@ -54,9 +54,25 @@ struct Fid {
   static constexpr Fid kNode4() { return Fid{3}; }
 };
 
+/**
+ * @brief Triple Modular Redundant (TMR) type for Time of Interval [0, 99].
+ */
 struct Toi {
-  uint8_t value;
-  explicit constexpr Toi(uint8_t v) noexcept : value(v) {}
+  TmrValue<CheckedRange<uint8_t, 0, 99>> storage{CheckedRange<uint8_t, 0, 99>{0U}};
+
+  constexpr Toi() noexcept = default;
+  explicit constexpr Toi(uint8_t v) noexcept : storage(CheckedRange<uint8_t, 0, 99>{v}) {}
+
+  [[nodiscard]] constexpr uint8_t value() const noexcept {
+    return static_cast<uint8_t>(storage.vote());
+  }
+
+  explicit constexpr operator uint8_t() const noexcept { return value(); }
+
+  // NOLINTNEXTLINE(fuchsia-overloaded-operator)
+  constexpr bool operator==(const Toi& other) const noexcept {
+    return value() == other.value();
+  }
 };
 
 /**
