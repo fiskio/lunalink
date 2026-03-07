@@ -31,9 +31,9 @@ inline constexpr std::array<std::array<uint8_t, 4>, 4> kSecondaryCodes = {{
 /// Structure defining the matched-code construction parameters for a given PRN.
 struct MatchedCodeAssignment {
   PrnId    primary_prn;
-  uint8_t  secondary_code_idx;    ///< 0-3 index into S0-S3
+  uint8_t  secondary_code_idx = 0;    ///< 0-3 index into S0-S3
   PrnId    tertiary_prn;
-  uint16_t tertiary_phase_offset; ///< Offset in chips (0-1499)
+  uint16_t tertiary_phase_offset = 0; ///< Offset in chips (0-1499)
 };
 
 /// Validate if an assignment struct contains valid IDs and indices.
