@@ -5,12 +5,11 @@ LunaLink AFS reference implementation with C++ core and pybind11 bindings.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started:
+   :caption: Executive Summary:
 
-   developing
-   tech_stack
+   evaluation_guide
    roadmap
-   versioning
+   references
 
 .. toctree::
    :maxdepth: 2
@@ -22,7 +21,7 @@ LunaLink AFS reference implementation with C++ core and pybind11 bindings.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Signal Design & Architecture:
+   :caption: Technical Reference:
 
    signal/architecture
    signal/signal_chain
@@ -31,7 +30,10 @@ LunaLink AFS reference implementation with C++ core and pybind11 bindings.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Verification & API:
+   :caption: Developer & Interoperability:
 
+   developing
+   tech_stack
    test_vectors
+   versioning
    api

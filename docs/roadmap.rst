@@ -50,7 +50,7 @@ Implementation Progress
      - BPSK Modulators (AFS-I 1.023 MHz, AFS-Q 5.115 MHz)
      - ✅ Done
    * - **C3**
-     - AFS-Q Tiered Code Combiner (Primary XOR Secondary XOR Tertiary)
+     - AFS-Q Matched-Code Combiner (Primary XOR Secondary XOR Tertiary)
      - ✅ Done
    * - **C4**
      - IQ Multiplexer (50/50 Power Sharing, Upsampling)

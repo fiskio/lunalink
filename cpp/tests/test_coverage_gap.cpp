@@ -3,7 +3,7 @@
 #include "lunalink/signal/modulator.hpp"
 #include "lunalink/signal/prn.hpp"
 #include "lunalink/signal/iq_mux.hpp"
-#include "lunalink/signal/tiered_code.hpp"
+#include "lunalink/signal/matched_code.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <array>
 
@@ -96,36 +96,36 @@ TEST_CASE("IQ Mux error paths") {
   CHECK(multiplex_iq(i_ok, q_ok, empty_out) == IqMuxStatus::kOutputTooSmall);
 }
 
-TEST_CASE("Tiered code error paths") {
+TEST_CASE("Matched code error paths") {
   std::array<uint8_t, kWeil10230ChipLength> out{};
   
   // Invalid PRN ID in default mapping
-  CHECK(tiered_code_epoch(PrnId{0}, 0, out) == TieredCodeStatus::kInvalidPrn);
+  CHECK(matched_code_epoch(PrnId{0}, 0, out) == MatchedCodeStatus::kInvalidPrn);
   
   // Empty output in default mapping
   std::span<uint8_t> empty_out{};
-  CHECK(tiered_code_epoch(PrnId{1}, 0, empty_out) == TieredCodeStatus::kOutputTooSmall);
+  CHECK(matched_code_epoch(PrnId{1}, 0, empty_out) == MatchedCodeStatus::kOutputTooSmall);
 
   // Invalid assignment in checked API
-  TieredCodeAssignment a{};
+  MatchedCodeAssignment a{};
   a.primary_prn = PrnId{0};
-  CHECK(tiered_code_epoch_checked(a, 0, out) == TieredCodeStatus::kInvalidAssignment);
+  CHECK(matched_code_epoch_checked(a, 0, out) == MatchedCodeStatus::kInvalidAssignment);
   
-  // Invalid primary PRN ID (internal check in tiered_code_epoch_checked)
+  // Invalid primary PRN ID (internal check in matched_code_epoch_checked)
   a.primary_prn = PrnId{211};
-  CHECK(tiered_code_epoch_checked(a, 0, out) == TieredCodeStatus::kInvalidAssignment);
+  CHECK(matched_code_epoch_checked(a, 0, out) == MatchedCodeStatus::kInvalidAssignment);
 
   // Invalid tertiary PRN ID
   a.primary_prn = PrnId{1};
   a.tertiary_prn = PrnId{0};
-  CHECK(tiered_code_epoch_checked(a, 0, out) == TieredCodeStatus::kInvalidAssignment);
+  CHECK(matched_code_epoch_checked(a, 0, out) == MatchedCodeStatus::kInvalidAssignment);
 
   // Invalid epoch
   a.tertiary_prn = PrnId{1};
-  CHECK(tiered_code_epoch_checked(a, kEpochsPerFrame, out) == TieredCodeStatus::kInvalidEpoch);
+  CHECK(matched_code_epoch_checked(a, kEpochsPerFrame, out) == MatchedCodeStatus::kInvalidEpoch);
   
   // Ergonomic overload test
   uint8_t arr[kWeil10230ChipLength] = {0};
-  CHECK(tiered_code_epoch(PrnId{1}, 0, arr) == TieredCodeStatus::kOk);
-  CHECK(tiered_code_epoch_checked(a, 0, arr) == TieredCodeStatus::kOk);
+  CHECK(matched_code_epoch(PrnId{1}, 0, arr) == MatchedCodeStatus::kOk);
+  CHECK(matched_code_epoch_checked(a, 0, arr) == MatchedCodeStatus::kOk);
 }
