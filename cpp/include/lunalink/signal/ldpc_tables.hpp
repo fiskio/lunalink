@@ -22,10 +22,12 @@ struct LdpcCsrMatrix {
 };
 
 extern const LdpcCsrMatrix kLdpc_sf2_a;
+extern const LdpcCsrMatrix kLdpc_sf2_b;
 extern const LdpcCsrMatrix kLdpc_sf2_b_inv;
 extern const LdpcCsrMatrix kLdpc_sf2_c;
 extern const LdpcCsrMatrix kLdpc_sf2_d;
 extern const LdpcCsrMatrix kLdpc_sf3_a;
+extern const LdpcCsrMatrix kLdpc_sf3_b;
 extern const LdpcCsrMatrix kLdpc_sf3_b_inv;
 extern const LdpcCsrMatrix kLdpc_sf3_c;
 extern const LdpcCsrMatrix kLdpc_sf3_d;

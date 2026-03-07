@@ -1,7 +1,8 @@
 #include "lunalink/signal/ldpc.hpp"
+#include "lunalink/signal/ldpc_tables.hpp"
 #include <catch2/catch_test_macros.hpp>
-#include <array>
 #include <algorithm>
+#include <array>
 
 using namespace lunalink::signal;
 

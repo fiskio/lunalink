@@ -16,11 +16,18 @@ OUT_CPP = REPO_ROOT / "cpp" / "signal" / "ldpc_tables.cpp"
 
 # Matrix Definitions from LSIS-AFS Annex 2
 MATRICES = [
+    # SF2 (Z=120, K=1200)
     {
         "id": "sf2_a",
         "file": "003a_lunanet_sf2_ldpc_submatrix_a_ind.csv",
         "rows": 480,
         "cols": 1200,
+    },
+    {
+        "id": "sf2_b",
+        "file": "003b_lunanet_sf2_ldpc_submatrix_b_ind.csv",
+        "rows": 480,
+        "cols": 480,
     },
     {
         "id": "sf2_b_inv",
@@ -40,11 +47,18 @@ MATRICES = [
         "rows": 4560,
         "cols": 480,
     },
+    # SF3 (Z=88, K=880)
     {
         "id": "sf3_a",
         "file": "003f_lunanet_sf3_ldpc_submatrix_a_ind.csv",
         "rows": 352,
         "cols": 880,
+    },
+    {
+        "id": "sf3_b",
+        "file": "003g_lunanet_sf3_ldpc_submatrix_b_ind.csv",
+        "rows": 352,
+        "cols": 352,
     },
     {
         "id": "sf3_b_inv",
