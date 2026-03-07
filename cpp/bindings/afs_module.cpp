@@ -97,7 +97,7 @@ PYBIND11_MODULE(_afs, m) {
   m.def("modulate_i", [](py::array_t<uint8_t> prn, int data) {
     auto r = prn.request();
     auto out = py::array_t<int8_t>(r.size);
-    if (modulate_bpsk_i(std::span<const uint8_t>(static_cast<const uint8_t*>(r.ptr), r.size), static_cast<int8_t>(data), std::span<int8_t>(out.mutable_data(), r.size)) != ModulationStatus::kOk)
+    if (modulate_bpsk_i(std::span<const uint8_t>(static_cast<const uint8_t*>(r.ptr), static_cast<size_t>(r.size)), static_cast<int8_t>(data), std::span<int8_t>(out.mutable_data(), static_cast<size_t>(r.size))) != ModulationStatus::kOk)
       throw py::value_error("Modulation failed");
     return out;
   });
@@ -105,7 +105,7 @@ PYBIND11_MODULE(_afs, m) {
   m.def("modulate_q", [](py::array_t<uint8_t> chips) {
     auto r = chips.request();
     auto out = py::array_t<int8_t>(r.size);
-    if (modulate_bpsk_q(std::span<const uint8_t>(static_cast<const uint8_t*>(r.ptr), r.size), std::span<int8_t>(out.mutable_data(), r.size)) != ModulationStatus::kOk)
+    if (modulate_bpsk_q(std::span<const uint8_t>(static_cast<const uint8_t*>(r.ptr), static_cast<size_t>(r.size)), std::span<int8_t>(out.mutable_data(), static_cast<size_t>(r.size))) != ModulationStatus::kOk)
       throw py::value_error("Modulation failed");
     return out;
   });

@@ -1,15 +1,20 @@
 cmake_minimum_required(VERSION 3.15)
 project(lunalink_core LANGUAGES CXX)
 
+# Options
+option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
+option(BUILD_TESTING "Build unit tests" ON)
+option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
+option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
+
 # --- C++ Standard & Flags ---
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Mission-Critical Flags (NASA/ESA/JAXA Compliance)
+# Warning Flags (NASA/ESA/JAXA Compliance)
 if(MSVC)
     set(LUNALINK_WARNING_FLAGS /W4 /WX /permissive-)
-    # No exceptions/RTTI flags for MSVC would go here if needed
 else()
     set(LUNALINK_WARNING_FLAGS
         -Wall -Wextra -Wpedantic -Werror
@@ -22,10 +27,10 @@ else()
         -Wformat=2
         -Wold-style-cast
         -Wimplicit-fallthrough
-        -fno-exceptions
-        -fno-rtti
         -fno-fast-math
         )
+    # Mission-critical safety flags (Core only)
+    set(LUNALINK_CORE_FLAGS -fno-exceptions -fno-rtti)
 endif()
 
 # --- Core Library ---
@@ -43,7 +48,7 @@ add_library(lunalink_core
 )
 target_include_directories(lunalink_core PUBLIC cpp/include)
 set_target_properties(lunalink_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_options(lunalink_core PRIVATE ${LUNALINK_WARNING_FLAGS})
+target_compile_options(lunalink_core PRIVATE ${LUNALINK_WARNING_FLAGS} ${LUNALINK_CORE_FLAGS})
 
 # --- Python Bindings ---
 if(BUILD_PYTHON_BINDINGS)
@@ -52,14 +57,28 @@ if(BUILD_PYTHON_BINDINGS)
 
     python_add_library(_afs MODULE cpp/bindings/afs_module.cpp)
     target_link_libraries(_afs PRIVATE lunalink_core pybind11::module)
+    # Bindings get standard warnings but NOT -fno-rtti (needed by pybind11)
     target_compile_options(_afs PRIVATE ${LUNALINK_WARNING_FLAGS})
     set_target_properties(_afs PROPERTIES CXX_VISIBILITY_PRESET "hidden")
+
+    # Install the extension into the package structure
+    install(TARGETS _afs DESTINATION lunalink/afs)
 endif()
 
 # --- Unit Tests ---
 if(BUILD_TESTING)
+    find_package(Catch2 3 QUIET)
+    if(NOT Catch2_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+          Catch2
+          GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+          GIT_TAG        v3.4.0
+        )
+        FetchContent_MakeAvailable(Catch2)
+    endif()
+
     enable_testing()
-    find_package(Catch2 3 REQUIRED)
 
     add_executable(test_lunalink
         cpp/tests/test_prn.cpp
@@ -93,7 +112,7 @@ endif()
 
 # --- Sanitizers ---
 if(ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    set(SANITIZE_FLAGS "-fsanitize=address,undefined -fno-omit-frame-pointer")
+    set(SANITIZE_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_compile_options(lunalink_core PRIVATE ${SANITIZE_FLAGS})
     target_link_options(lunalink_core PRIVATE ${SANITIZE_FLAGS})
     
