@@ -38,7 +38,7 @@ Module Layout
    * - ``iq_mux``
      - 50/50 power multiplexing and sample-and-hold upsampling (1x I → 5x Q).
    * - ``bch``
-     - BCH(51,8) encoding for the SB1 frame header.
+     - BCH(51,8) encoding and ML correlation-based decoding for SB1.
    * - ``frame``
      - Navigation frame construction, including sync pattern insertion.
 

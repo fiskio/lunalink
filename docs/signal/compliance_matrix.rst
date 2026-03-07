@@ -81,6 +81,10 @@ Navigation Message (Section 2.4)
      - BCH(51,8) SB1 Encoding
      - ✅
      - Implemented in ``bch.cpp``
+   * - LSIS-311
+     - BCH(51,8) SB1 Decoding (ML Correlation)
+     - ✅
+     - Flight-hardened implementation in ``bch.cpp``
    * - LSIS-320
      - LDPC(1200,600) for SB2-SB4 (SF2, SF3, SF4)
      - ❌
