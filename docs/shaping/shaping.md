@@ -36,26 +36,26 @@ This project uses a **gateway-based approach** to break down the complex LSIS-AF
 
 ---
 
-## Selected Shape: C — Eigen for PNT, static C++ for LDPC
+## Selected Shape: Competition Gateway Alignment
 
 This section defines the target technical shape. Implementation status is tracked in `docs/shaping/progress.md`.
 
-| Gateway | Part | Mechanism |
-|:---:|---|---|
-| **G1** | C1, C3 | **Spreading:** Parse hex PRN tables into static storage; tiered XOR assembly; < 1s/PRN. |
-| **G4** | C2, C4 | **Signal Gen:** BPSK(1) I / BPSK(5) Q; mapping: 0→+1, 1→-1; 5.115 MSPS; chunked I/O. |
-| **G2** | C5 | **BCH(51,8):** 8-stage Fibonacci LFSR (Poly 763₈); decoder uses 256-hypothesis correlation. |
-| **G2** | — | **CRC-24:** G(X) = (1+X)·P(X) per LSIS-FID0-467; applies to all subframes. |
-| **G2** | — | **Interleaver:** 60x98 block matrix; row-wise write, column-wise read. |
-| **G2** | C6, C7 | **LDPC:** Min-sum BP (50 iter); SF2/3/4 matrices from Annex1; static buffers ~70KB. |
-| **G3** | C8 | **Framing:** 12s duration; Prepend 68-sym sync; Subframe 1-4 builders; Frame assembly. |
-| **G5** | — | **RX Sync:** Cross-correlation with sync pattern; handle timing offsets and Doppler. |
-| **G6** | C9 | **Parsing:** Packed bit-field extraction; ToT calculation (WN×Tw + ITOW×Tbi + TOI×Tf). |
-| **G7** | — | **Validation:** Round-trip tests; Performance benchmarking; Interop with test vectors. |
-| **G8** | — | **Docs:** Sphinx-based API docs; Doxygen-style comments; usage examples for each gateway. |
+| Gateway | Our ID | Mechanism |
+|:---:|:---:|---|
+| **G1** | **GD1.1-2** | **Spreading:** Parse hex PRN tables into static storage; tiered XOR assembly; < 1s/PRN. |
+| **G4** | **GD4.1-2** | **Signal Gen:** BPSK(1) I / BPSK(5) Q; mapping: 0→+1, 1→-1; 5.115 MSPS; chunked I/O. |
+| **G2** | **GD2.1** | **BCH(51,8):** 8-stage Fibonacci LFSR (Poly 763₈); decoder uses 256-hypothesis correlation. |
+| **G2** | **GD2.4** | **CRC-24:** G(X) = (1+X)·P(X) per LSIS-FID0-467; applies to all subframes. |
+| **G2** | **GD2.3** | **Interleaver:** 60x98 block matrix; row-wise write, column-wise read. |
+| **G2** | **GD2.2** | **LDPC:** Min-sum BP (50 iter); SF2/3/4 matrices from Annex1; static buffers ~70KB. |
+| **G3** | **GD3.1-2** | **Framing:** 12s duration; Prepend 68-sym sync; Subframe 1-4 builders; Frame assembly. |
+| **G5** | **GD5.1-2** | **RX Sync:** Cross-correlation with sync pattern; handle timing offsets and Doppler. |
+| **G6** | **GD6.1-2** | **Parsing:** Packed bit-field extraction; ToT calculation (WN×Tw + ITOW×Tbi + TOI×Tf). |
+| **G7** | **GD7.1-4** | **Validation:** Round-trip tests; Performance benchmarking; Interop with test vectors. |
+| **G8** | **GD8.1-4** | **Docs:** Sphinx-based API docs; Doxygen-style comments; usage examples for each gateway. |
 
 ---
-## Performance Benchmarking Strategy (G7.3)
+## Performance Benchmarking Strategy (GD7.3)
 
 To fulfill the competition's performance NFRs (NFR-1.1 through NFR-1.4), the implementation includes a dedicated benchmarking suite.
 
@@ -67,42 +67,25 @@ To fulfill the competition's performance NFRs (NFR-1.1 through NFR-1.4), the imp
 | **Dec Latency** | Time to decode one 6000-symbol frame | G2 | < 1.0 s |
 | **Real-Time Factor** | Signal Duration / Processing Time | G7 | > 12.0 |
 
-### 2. Methodology
-*   **Environment:** Benchmarks are executed on a single thread with no hardware acceleration (SIMD/GPU) enabled by default, to ensure baseline compliance.
-*   **Warm-up:** Each test runs 10 "warm-up" iterations before measuring to exclude OS/Cache noise.
-*   **Tools:**
-    *   **C++:** `google/benchmark` (if available) or `std::chrono` high-resolution timers.
-    *   **Python:** `timeit` and `cProfile` for binding overhead analysis.
+---
 
-### 3. Reporting
-A `performance_report.json` is generated during CI/CD (Phase 3), documenting:
-1.  System hardware specs (CPU, RAM).
-2.  Mean, Min, Max, and Standard Deviation for each metric.
-3.  A "Pass/Fail" status against Gateway success criteria.
+## Fit Check: Requirements × Deliverables
 
-| Req | Requirement | Current Status | C |
+| Req | Requirement | Current Status | ID |
 |-----|-------------|--------|---|
 | R0 | Best reference implementation: correctness, interoperability, docs | In progress | program objective |
-| R1 | Spreading codes from provided PRN hex tables | Implemented | ✅ via C1 |
-| R2 | Encode + decode: BCH, CRC-24, LDPC, interleaver/deinterleaver, 12 s frame | Not implemented yet | planned via C5–C8 |
-| R3 | All 22 MSG types; 8 per spec (G1/G2/G4/G5/G8/G22/G24/G30), 14 per SISICD | Not implemented yet | planned via C9 |
-| R4 | C++ self-standing, flight-heritage coding practices throughout | Partial | core signal path in place; extend across codec/RX |
-| R5 | Documentation: compliance matrix, block diagrams, narrative Sphinx pages | Partial | signal-chain docs present; compliance/SISICD/spec-findings incomplete |
-| R6 | Web-app demo (Moon globe, correlator, PNT, optionally SDR) | Deferred | C12/C15/C16 deferred |
-| R7 | Validate against spec and demonstrate interoperability | Not implemented yet | planned V3/V4 |
-| R7.1 | Test vectors in documented binary format | Started | test-vector format draft exists |
-| R7.2 | BER curves vs uncoded BPSK + Shannon limit | Not implemented yet | planned V4 |
-| R7.3 | Cross-decode: full RX pipeline decodes own test vectors | Not implemented yet | planned V4 |
-| R7.4 | SISICD for TBW message types | Not implemented yet | planned draft V2, final V4 |
-| R7.5 | Spec Findings Report | In progress | ambiguities log started; draft/final pending |
-| R7.6 | Parameter sensitivity testing | Not implemented yet | planned V4 |
-| R7.7 | Link budget analysis (spec power levels → Eb/N₀ → BER → decode rate) | Not implemented yet | planned V4 |
-| R8 | PNT pipeline: correlator → pseudoranges → position fix | Not implemented yet | planned V5 (C10/C11/C13) |
+| R1 | Spreading codes from provided PRN hex tables | Implemented | ✅ GD1.1 |
+| R2 | Encode + decode: BCH, CRC-24, LDPC, interleaver/deinterleaver, 12 s frame | In progress | GD2.1-4 |
+| R3 | All 22 MSG types; 8 per spec + 14 per SISICD | Not started | GD6.1 |
+| R4 | C++ self-standing, flight-heritage coding practices throughout | Partial | core signal path done |
+| R5 | Documentation: Setup, Usage, API, Design, and Test results | Partial | GD8.1-4 |
+| R7 | Validate against spec and demonstrate interoperability | Not started | GD7.4 |
+| R7.1 | Test vectors in standardized binary format | Started | GD7.4 |
+| R7.3 | Cross-decode: full RX pipeline decodes own/external vectors | Not started | GD7.4 |
+| R7.5 | Spec Findings Report | In progress | GD8.4 |
+| R8 | Real-time capable: process faster than signal duration | Not started | NFR-1.4 |
 
 **Notes:**
-- This table is intentionally status-aware; it must stay aligned with `docs/shaping/progress.md`.
-- R6 remains a deliberate defer: competition strength is standards-faithful implementation and interop evidence first.
-- C6/C7 and C10 design spikes are closed at design level, but implementation status remains tracked in `progress.md`.
-- V1–V4 cover milestone intent; actual completion is based on landed code/tests/docs, not planned architecture text.
-
-**Open spikes:** spike-C12.md (deferred)
+- This table is strictly aligned with `docs/shaping/progress.md`.
+- GD2.2 and GD5.1 spikes are closed at design level; implementation is ongoing.
+- Gateway 7 (Integration) is the final validation hurdle for Level 4 Compliance.

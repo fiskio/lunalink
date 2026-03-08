@@ -1,7 +1,3 @@
----
-shaping: true
----
-
 # Progress Tracker — Gateway Mapping
 
 Single source of truth for what's done, what's next, and what's blocked.
@@ -12,16 +8,17 @@ This implementation is tracked against the **8-Gateway Competition Structure**.
 ## Gateway 1: Spreading Code Generation
 | ID | Deliverable | Status | Notes |
 |:---|:---|:---:|:---|
-| **GD1.1** | Spreading Code Loader (Gold, Weil, Legendre) | **Done** | #2 merged |
-| **GD1.2** | Tiered Code Combiner (Matched Code) | **Done** | Table 10 mapping |
+| **GD1.1** | Spreading Code Loader (Gold, Weil, Legendre) | **Implemented [Hardened]** | Packed storage; TMR IDs; CBIT checksums |
+| **GD1.2** | Tiered Code Combiner (Matched Code) | **Implemented [Hardened]** | CheckedRange; CFI; Secure Scrubbing |
 
 ---
 
 ## Gateway 2: Forward Error Correction
 | ID | Deliverable | Status | Notes |
 |:---|:---|:---:|:---|
-| **GD2.1** | BCH(51,8) Encoder/Decoder | **In progress** | Dec: Correlation-based |
-| **GD2.2** | LDPC Encoder/Decoder (5G NR SF2/3/4) | **In progress** | Flight-hardened C6 done |
+| **GD2.1** | BCH(51,8) Encoder/Decoder | **Implemented [Hardened]** | ML Decoding; Soft-TMR; CFI |
+| **GD2.2** | LDPC Encoder (5G NR SF2/3/4) | **Implemented [Hardened]** | CSR-hardened; ALU mirroring; CFI |
+| **GD2.2** | LDPC Decoder (Min-Sum BP) | **Not started** | Spike-C7 closed |
 | **GD2.3** | Block Interleaver/Deinterleaver (60x98) | **Not started** | Phase 2 Priority |
 | **GD2.4** | CRC-24 Generator/Validator | **Not started** | Phase 2 Priority |
 
@@ -30,7 +27,7 @@ This implementation is tracked against the **8-Gateway Competition Structure**.
 ## Gateway 3: Message Framing
 | ID | Deliverable | Status | Notes |
 |:---|:---|:---:|:---|
-| **GD3.1** | Subframe 1-4 Builders | **Partial** | SB1 (BCH) done |
+| **GD3.1** | Subframe 1-4 Builders | **Partial [Hardened]** | SB1 (BCH) done; SEU-resistant enums |
 | **GD3.2** | Frame Assembler (12s duration) | **Not started** | Concatenation logic |
 
 ---
@@ -38,8 +35,8 @@ This implementation is tracked against the **8-Gateway Competition Structure**.
 ## Gateway 4: Baseband Signal Generation
 | ID | Deliverable | Status | Notes |
 |:---|:---|:---:|:---|
-| **GD4.1** | BPSK Modulator (AFS-I + AFS-Q) | **Done** | V1+V2 commit |
-| **GD4.2** | IQ Multiplexer (5.115 MSPS) | **Done** | Upsampling + Interleaving |
+| **GD4.1** | BPSK Modulator (AFS-I + AFS-Q) | **Implemented [Hardened]** | Branchless; CFI loops; Stack scrubbing |
+| **GD4.2** | IQ Multiplexer (5.115 MSPS) | **Implemented [Hardened]** | Upsampling; Aliasing protection; WIP ticks |
 
 ---
 
@@ -82,6 +79,5 @@ This implementation is tracked against the **8-Gateway Competition Structure**.
 ## What's Next (Phase 2 Priority)
 
 1.  **GD2.3/2.4:** Implement the **Block Interleaver** and **CRC-24** (prerequisites for full framing).
-2.  **GD2.1 Decoder:** Implement the **BCH(51,8) correlation-based decoder**.
-3.  **GD2.2 LDPC:** Finalize the **LDPC table pipeline** and integration.
-4.  **GD3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.
+2.  **GD2.2 LDPC Decoder:** Implement the **Min-Sum BP decoder** with static LLR buffers.
+3.  **GD3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.
