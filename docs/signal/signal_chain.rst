@@ -1,5 +1,5 @@
-Signal Chain (GD1–GD4)
-====================
+Signal Chain (GD1-GD4)
+======================
 
 The LunaLink signal generation pipeline follows the LSIS V1.0 Augmented Forward Signal (AFS) specification. It is composed of modular, flight-hardened components that transform navigation data into baseband I/Q samples.
 
