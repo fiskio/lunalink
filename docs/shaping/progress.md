@@ -1,3 +1,7 @@
+---
+shaping: true
+---
+
 # Progress Tracker — Gateway Mapping
 
 Single source of truth for what's done, what's next, and what's blocked.
@@ -79,5 +83,6 @@ This implementation is tracked against the **8-Gateway Competition Structure**.
 ## What's Next (Phase 2 Priority)
 
 1.  **GD2.3/2.4:** Implement the **Block Interleaver** and **CRC-24** (prerequisites for full framing).
-2.  **GD2.2 LDPC Decoder:** Implement the **Min-Sum BP decoder** with static LLR buffers.
-3.  **GD3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.
+2.  **GD2.1 Decoder:** Implement the **BCH(51,8) correlation-based decoder**.
+3.  **GD2.2 LDPC:** Finalize the **LDPC table pipeline** and integration.
+4.  **GD3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.

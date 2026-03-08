@@ -10,10 +10,10 @@ This project follows the **Gateway Principle** defined in the competition docume
 
 | Gateway | Deliverable | Success Criteria | Status |
 |:---|:---|:---|:---|
-| **G1** | Spreading Code Generation | All 210 PRNs match Annex3; Gen time < 1s/PRN | Done |
+| **G1** | Spreading Code Generation | All 210 PRNs match Annex3; Gen time < 1s/PRN | Implemented [Hardened] |
 | **G2** | FEC Encoding & Decoding | Round-trip recovery; BER < 10⁻⁵ @ SNR > 0dB | In progress |
 | **G3** | Message Framing | 12s frame assembly; 6000 symbol count; Sync pass | In progress |
-| **G4** | Baseband Signal Generation | Binary I/Q files; 5.115 MSPS; Dual-channel BPSK | Done |
+| **G4** | Baseband Signal Generation | Binary I/Q files; 5.115 MSPS; Dual-channel BPSK | Implemented [Hardened] |
 | **G5** | Frame Sync & Decoding | >99% detection @ SNR > 0dB; Sync offsets handled | Not started |
 | **G6** | Message Parsing | All subframes parsed; ToT calculation accuracy | Not started |
 | **G7** | Integration & Validation | 100% round-trip accuracy; Interop tests pass | Not started |

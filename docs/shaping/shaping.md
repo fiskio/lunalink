@@ -67,6 +67,19 @@ To fulfill the competition's performance NFRs (NFR-1.1 through NFR-1.4), the imp
 | **Dec Latency** | Time to decode one 6000-symbol frame | G2 | < 1.0 s |
 | **Real-Time Factor** | Signal Duration / Processing Time | G7 | > 12.0 |
 
+### 2. Methodology
+*   **Environment:** Benchmarks are executed on a single thread with no hardware acceleration (SIMD/GPU) enabled by default, to ensure baseline compliance.
+*   **Warm-up:** Each test runs 10 "warm-up" iterations before measuring to exclude OS/Cache noise.
+*   **Tools:**
+    *   **C++:** `google/benchmark` (if available) or `std::chrono` high-resolution timers.
+    *   **Python:** `timeit` and `cProfile` for binding overhead analysis.
+
+### 3. Reporting
+A `performance_report.json` is generated during CI/CD (Phase 3), documenting:
+1.  System hardware specs (CPU, RAM).
+2.  Mean, Min, Max, and Standard Deviation for each metric.
+3.  A "Pass/Fail" status against Gateway success criteria.
+
 ---
 
 ## Fit Check: Requirements × Deliverables
