@@ -10,10 +10,10 @@ This project follows the **Gateway Principle** defined in the competition docume
 
 | Gateway | Deliverable | Success Criteria | Status |
 |:---|:---|:---|:---|
-| **G1** | Spreading Code Generation | All 210 PRNs match Annex3; Gen time < 1s/PRN | Done |
+| **G1** | Spreading Code Generation | All 210 PRNs match Annex3; Gen time < 1s/PRN | Implemented [Hardened] |
 | **G2** | FEC Encoding & Decoding | Round-trip recovery; BER < 10⁻⁵ @ SNR > 0dB | In progress |
 | **G3** | Message Framing | 12s frame assembly; 6000 symbol count; Sync pass | In progress |
-| **G4** | Baseband Signal Generation | Binary I/Q files; 5.115 MSPS; Dual-channel BPSK | Done |
+| **G4** | Baseband Signal Generation | Binary I/Q files; 5.115 MSPS; Dual-channel BPSK | Implemented [Hardened] |
 | **G5** | Frame Sync & Decoding | >99% detection @ SNR > 0dB; Sync offsets handled | Not started |
 | **G6** | Message Parsing | All subframes parsed; ToT calculation accuracy | Not started |
 | **G7** | Integration & Validation | 100% round-trip accuracy; Interop tests pass | Not started |
@@ -25,11 +25,12 @@ This project follows the **Gateway Principle** defined in the competition docume
 
 **Goal:** Establish the foundation and validate core signal components.
 
-**Gateways Covered:** Partial G1, G4, G8.
+**Gateways Covered:** G1 (Implemented [Hardened]), G4 (Implemented [Hardened]), Partial G2 (Encoder/Decoder Implemented [Hardened]), G8.
 
-*   **Signal Foundation:** Gold-2046 generation (G1.1), AFS-I BPSK modulation (G4.1), and IQ Multiplexing (G4.3).
-*   **Architecture:** Module layout defined in `docs/signal/architecture.rst` (G8.4).
-*   **Compliance:** Skeleton matrix in `docs/signal/compliance_matrix.rst` (G7.4).
+*   **Signal Foundation:** Gold-2046 generation (GD1.1), AFS-I BPSK modulation (GD4.1), and IQ Multiplexing (GD4.2). Implemented [Hardened] with TMR and CFI.
+*   **FEC Core:** Flight-hardened BCH(51,8) encoder/decoder (GD2.1) and CSR-optimized LDPC encoder (GD2.2). Implemented [Hardened] with ALU mirroring and stack scrubbing.
+*   **Architecture:** Module layout defined in `docs/signal/architecture.rst` (GD8.1).
+*   **Compliance:** Skeleton matrix in `docs/signal/compliance_matrix.rst` (GD8.3).
 *   **Validation:** C++ Catch2 suite + Python pytest integration.
 
 ---
