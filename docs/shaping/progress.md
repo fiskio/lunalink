@@ -9,89 +9,79 @@ This implementation is tracked against the **8-Gateway Competition Structure**.
 
 ---
 
-## Gateway Mapping
-
-| Gateway | Deliverable | Status | Parts Involved |
-|:---:|:---|:---:|:---|
-| **G1** | Spreading Code Generation | **Done** | C1, C3 |
-| **G2** | FEC Encoding & Decoding | **In progress** | C5, C6, C7 |
-| **G3** | Message Framing | **In progress** | C8 |
-| **G4** | Baseband Signal Generation | **Done** | C2, C4 |
-| **G5** | Frame Sync & Decoding | **Not started** | C10 (Spike done) |
-| **G6** | Message Parsing | **Not started** | C9 |
-| **G7** | Integration & Validation | **Not started** | — |
-| **G8** | Documentation | **Partial** | — |
+## Gateway 1: Spreading Code Generation
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD1.1** | Spreading Code Loader (Gold, Weil, Legendre) | **Done** | #2 merged |
+| **GD1.2** | Tiered Code Combiner (Matched Code) | **Done** | Table 10 mapping |
 
 ---
 
-## Implementation Parts (C-Numbers)
-
-Legend: Done / PR open / In progress / Not started / Deferred
-
-### Gateway 1 & 4: Spreading & Signal Gen
-| Part | Description | Status | Gateway | Notes |
-|:---|:---|:---:|:---:|:---|
-| C1 | Code loader (Gold, Weil, Legendre) | Done | G1 | #2 merged |
-| C2 | BPSK modulator (AFS-I + AFS-Q) | Done | G4 | V1+V2 commit |
-| C3 | Tiered code combiner | Done | G1 | Secondary code mapping (Table 10) |
-| C4 | IQ multiplexer (5.115 MSPS) | Done | G4 | Chunked generation |
-
-### Gateway 2: Forward Error Correction
-| Part | Description | Status | Gateway | Notes |
-|:---|:---|:---:|:---:|:---|
-| C5 | BCH(51,8) Encoder | Done | G2 | Polynomial 763₈ (Figure 8 verified) |
-| C5 | BCH(51,8) Decoder | In progress | G2 | Correlation-based (256 hypotheses) |
-| C6 | LDPC Encoder (5G NR SF2/3/4) | Not started | G2 | Spike-C7 closed |
-| C7 | LDPC Decoder (Min-Sum BP) | Not started | G2 | Spike-C7 closed |
-| — | Block Interleaver/Deinterleaver | Not started | G2 | 60x98 matrix |
-| — | CRC-24 Generator/Validator | Not started | G2 | G(X)=(1+X)·P(X) |
-
-### Gateway 3: Message Framing
-| Part | Description | Status | Gateway | Notes |
-|:---|:---|:---:|:---:|:---|
-| C8 | Frame Builder (TX) | Partial | G3 | Sync + BCH SB1 done |
-| — | Subframe 2/3/4 Builders | Not started | G3 | LDPC + Interleaver required |
-| — | Frame Assembler | Not started | G3 | 12s frame concatenation |
-
-### Gateway 5 & 6: RX Pipeline
-| Part | Description | Status | Gateway | Notes |
-|:---|:---|:---:|:---:|:---|
-| C10 | Software Correlator | Not started | G5 | Spike-C10 closed |
-| — | Sync Pattern Detector | Not started | G5 | Cross-correlation |
-| C9 | Message Parsers (all 22 types) | Not started | G6 | 8 spec-defined + 14 SISICD |
-| — | ToT Calculator | Not started | G6 | LSIS-720 formula |
-
-### Gateway 7: Integration, Performance & Utilities
-| Part | Description | Status | Gateway | Notes |
-|:---|:---|:---:|:---:|:---|
-| C11 | PNT Solver (pseudoranges -> fix) | Not started | G7 | Eigen-based |
-| — | SISE Calculation (Pos/Vel Error) | Not started | G7 | 95th percentile analysis |
-| — | Link Budget Analysis | Not started | G7 | -160 dBW sensitivity |
-| — | Final Compliance Report | Not started | G7 | Gateway 1-8 evidence |
+## Gateway 2: Forward Error Correction
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD2.1** | BCH(51,8) Encoder/Decoder | **In progress** | Dec: Correlation-based |
+| **GD2.2** | LDPC Encoder/Decoder (5G NR SF2/3/4) | **In progress** | Flight-hardened C6 done |
+| **GD2.3** | Block Interleaver/Deinterleaver (60x98) | **Not started** | Phase 2 Priority |
+| **GD2.4** | CRC-24 Generator/Validator | **Not started** | Phase 2 Priority |
 
 ---
 
-## Documentation & Submission Deliverables
+## Gateway 3: Message Framing
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD3.1** | Subframe 1-4 Builders | **Partial** | SB1 (BCH) done |
+| **GD3.2** | Frame Assembler (12s duration) | **Not started** | Concatenation logic |
 
-| Deliverable | Gateway | Status | Notes |
-|:---|:---:|:---:|:---|
-| Signal chain block diagram | G8 | Done | docs/signal/signal_chain.rst |
-| Compliance Matrix (G1-G8) | G8 | Partial | docs/signal/compliance_matrix.rst |
-| Architecture Description | G8 | Done | docs/signal/architecture.rst |
-| SISICD (TBW field layouts) | G8 | Done | docs/signal/sisicd.rst |
-| Spec Findings Report | G8 | Partial | docs/signal/spec_findings_report.rst |
-| Test Vector Suite (codes, frames, signals) | G7 | Partial | Standardized binary format |
-| **Interoperability Test Report** | G7 | Not started | Official 7-section template |
-| **Performance Report** | G7 | Not started | Throughput/Latency analysis |
-| **Compliance Checklist** | G7 | Not started | Final success metric audit |
-| BER Performance Curves | G7 | Not started | Eb/N0 sweeps for SF2/3 |
-| API Usage Examples (Notebooks) | G8 | Not started | G8 success criteria |
+---
+
+## Gateway 4: Baseband Signal Generation
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD4.1** | BPSK Modulator (AFS-I + AFS-Q) | **Done** | V1+V2 commit |
+| **GD4.2** | IQ Multiplexer (5.115 MSPS) | **Done** | Upsampling + Interleaving |
+
+---
+
+## Gateway 5: Frame Sync & Decoding
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD5.1** | Software Correlator (Acquisition/Tracking) | **Not started** | Spike-C10 closed |
+| **GD5.2** | Sync Pattern Detector | **Not started** | Cross-correlation |
+
+---
+
+## Gateway 6: Message Parsing
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD6.1** | Message Parsers (all 22 types) | **Not started** | 8 spec-defined + 14 SISICD |
+| **GD6.2** | ToT Calculator | **Not started** | LSIS-720 formula |
+
+---
+
+## Gateway 7: Integration & Validation
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD7.1** | PNT Solver (Weighted Least-Squares) | **Not started** | Eigen-based |
+| **GD7.2** | SISE Calculation (Pos/Vel Error) | **Not started** | 95th percentile analysis |
+| **GD7.3** | Performance Benchmark Suite | **Not started** | NFR validation |
+| **GD7.4** | Interoperability Test Report | **Not started** | Official template |
+
+---
+
+## Gateway 8: Documentation & Examples
+| ID | Deliverable | Status | Notes |
+|:---|:---|:---:|:---|
+| **GD8.1** | API Reference (Sphinx/Doxygen) | **Partial** | Ongoing |
+| **GD8.2** | Usage Examples (Notebooks) | **Not started** | |
+| **GD8.3** | Final Compliance Matrix | **Partial** | docs/signal/compliance_matrix.rst |
+| **GD8.4** | Spec Findings Report | **Partial** | Renamed from observations |
 
 ---
 
 ## What's Next (Phase 2 Priority)
 
-1.  **G2 Core:** Implement the **Block Interleaver** and **CRC-24** (prerequisites for full framing).
-2.  **G2 Decoder:** Implement the **BCH(51,8) correlation-based decoder**.
-3.  **G2 LDPC:** Implement the **LDPC table pipeline** (`scripts/gen_ldpc_tables.py`) and **Encoder** (C6).
-4.  **G3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.
+1.  **GD2.3/2.4:** Implement the **Block Interleaver** and **CRC-24** (prerequisites for full framing).
+2.  **GD2.1 Decoder:** Implement the **BCH(51,8) correlation-based decoder**.
+3.  **GD2.2 LDPC:** Finalize the **LDPC table pipeline** and integration.
+4.  **GD3 Framing:** Complete the **Subframe 2-4 Builders** to enable 12s frame generation.
